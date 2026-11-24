@@ -1,10 +1,10 @@
 # AI-Assisted Manufacturing Quality Inspection
 
-Starter monorepo for a human-reviewed manufacturing inspection workflow. The AI recommends a classification; a Quality Engineer makes and submits the final decision.
+Monorepo for a human-reviewed manufacturing inspection workflow. The AI recommends a classification; a Quality Engineer makes and submits the final decision.
 
 ## Current status
 
-This repository is being built in approval-gated phases. Phase 1 is approved and Phase 2 implements the FastAPI API, deterministic mock AI analysis, server-side authorization, image validation/storage, inspection history, and dashboard calculations. React integration and persistent PostgreSQL support are later phases.
+This repository is being built in approval-gated phases. Phases 1 and 2 are approved. Phase 2 implements the FastAPI API and deterministic mock AI analysis; Phase 3 integrates a React dashboard and inspection workflow with that API. PostgreSQL support remains a later phase.
 
 ## Product overview
 
@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (normally http://localhost:5173). Build and quality commands: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run test`.
+Open the URL Vite prints (normally http://localhost:5173). Set `VITE_API_BASE_URL` in `frontend/.env.local` if the API is not at `http://127.0.0.1:8000/api/v1`. The interface uses shadcn/ui components with Tailwind CSS 4. Build and quality commands: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run test -- --run`.
 
 ## Start the backend
 
@@ -74,9 +74,8 @@ See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for phase status,
 
 ## Current limitations
 
-- The frontend is a foundation shell, not the complete inspection workflow.
+- The frontend workflow is integrated with the mock API; demo user selection is a development convenience, not production authentication.
 - Mock repositories are in-memory, so inspections are not persistent across backend restarts.
 - No sample product images or external assets are included.
 - No live AI vendor adapter, PostgreSQL repositories, production authentication, or deployment setup are included at this stage.
-- The mock API and inspection workflow are implemented, but the React application is not yet integrated with them.
 - The persistent PostgreSQL setup path will be documented after its implementation and verification phase.

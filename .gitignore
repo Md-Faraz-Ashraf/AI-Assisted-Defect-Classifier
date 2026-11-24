@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+CODEX_MASTER_PROMPT.md
 .venv/
 venv/
 __pycache__/

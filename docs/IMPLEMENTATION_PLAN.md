@@ -2,9 +2,10 @@
 
 ## Overall progress
 
-- Current phase: Phase 2 — Build Backend API
+- Current phase: Phase 3 — Build React and Integrate with Backend
 - Phase 1 status: `APPROVED`
-- Phase 2 status: `READY_FOR_REVIEW`
+- Phase 2 status: `APPROVED`
+- Phase 3 status: `READY_FOR_REVIEW`
 - Later phases remain `NOT_STARTED` and will not begin until the preceding phase is explicitly approved.
 
 Statuses: `NOT_STARTED`, `IN_PROGRESS`, `READY_FOR_REVIEW`, `APPROVED`, `BLOCKED`, `REJECTED`, `COMPLETED`.
@@ -34,13 +35,23 @@ Phase status: `APPROVED`
 | P2-06 | Validate and store images safely behind storage interface | COMPLETED | P2-01 | Tests cover valid images, invalid content, MIME mismatch, file size, generated names, serving, and traversal attempt. | No |
 | P2-07 | Add business/API tests and run backend lint, formatting, type/syntax and smoke checks | COMPLETED | P2-01–P2-06 | `python -m pytest -v`: 30 passed; Ruff lint and format check passed; `python -m mypy app`: no issues in 26 source files; `python -m compileall -q app` passed. Live Uvicorn smoke on port 8001: health `ok`, users 2, batches 3, empty dashboard total 0, Swagger HTTP 200. | No |
 | P2-08 | Document API examples and update architecture, setup, user dependencies, and checklist | COMPLETED | P2-01–P2-07 | Updated API reference with endpoint contracts, request examples, error shape, demo user mechanism, Swagger and PowerShell verification. README and architecture/user-input docs reflect current implementation and limitations. | No |
-| P2-09 | User manual verification and approval | NOT_STARTED | P2-01–P2-08 | User follows Swagger/PowerShell steps and explicitly approves. | Yes |
+| P2-09 | User manual verification and approval | APPROVED | P2-01–P2-08 | User explicitly approved Phase 2 and instructed starting Phase 3 on 2026-11-24. | Yes |
 
-Phase status: `READY_FOR_REVIEW`
+Phase status: `APPROVED`
 
 ## Phase 3 — Build React and Integrate with Backend
 
-Phase status: `NOT_STARTED`
+| Task ID | Description | Status | Dependencies | Verification method / actual result | User input required? |
+|---|---|---|---|---|---|
+| P3-01 | Configure React, strict TypeScript, routing, TanStack Query, forms, validation, Tailwind and reusable shadcn/ui | COMPLETED | Phase 2 approved | React Router, TanStack Query, React Hook Form, Zod, Tailwind 4 and shadcn/ui are configured; `components.json` and themed components are present. | No |
+| P3-02 | Build responsive dashboard, summary metrics, final-defect chart, recent history, and loading/error/empty states | COMPLETED | P3-01 | Dashboard uses typed API queries and server calculations; screen-level empty-state test passes. | No |
+| P3-03 | Build inspection history with image previews, decision status, filters and pagination | COMPLETED | P3-01 | API-backed history table and batch/defect filters; history empty-state and filter controls test passes. | No |
+| P3-04 | Build engineer-only upload, AI prediction, accept/override, comments, and submission flow | COMPLETED | P3-01, P3-02 | Zod validates JPEG/PNG/WebP and 5 MiB limit; final category is required; request mutation invalidates dashboard/history and navigates on success. Supervisor link and route are role-gated in the UI; backend remains authoritative. | No |
+| P3-05 | Add typed API client, cancellation, query keys, demo-user selector and role indicator | COMPLETED | P3-01 | API client tests cover demo header, query filters, multipart upload and structured API errors; queries pass TanStack cancellation signals. | No |
+| P3-06 | Run frontend checks and API integration smoke | COMPLETED | P3-01–P3-05 | `npm run typecheck`, lint (0 errors), Prettier, Vitest (5 passed), and production build passed. Existing Phase 2 backend integration suite has 30 passing cases. Direct Uvicorn loopback smoke was attempted but Windows sandbox denied the socket (`WinError 10013`); combined browser-to-live-API flow remains for Phase 4 verification. `npm audit --omit=dev` could not reach registry DNS. | No |
+| P3-07 | User verification and approval to proceed | NOT_STARTED | P3-01–P3-06 | User reviews the screens and confirms before Phase 4. | Yes |
+
+Phase status: `READY_FOR_REVIEW`
 
 ## Phase 4 — Verify Complete Mock Flow
 
@@ -76,7 +87,7 @@ Phase 2 verification evidence:
 - OpenAPI is generated from the running FastAPI app; automated test checks the Phase 2 endpoints are present.
 - The local mock API needs neither PostgreSQL nor an AI key. Live vision analysis remains unverified and needs user selection of a provider/model and local credential configuration.
 
-Phase 2 is `READY_FOR_REVIEW`; no Phase 2 approval has been recorded.
+Phase 2 was explicitly approved by the user on 2026-11-24. Phase 3 is in progress.
 
 ## Open questions
 
@@ -86,4 +97,5 @@ Phase 2 is `READY_FOR_REVIEW`; no Phase 2 approval has been recorded.
 ## User approval history
 
 - 2026-11-24: User explicitly approved Phase 1 and instructed start of Phase 2 (`"project is pushed to git. please start phase 2"`).
-- Phase 2 user review is pending.
+- 2026-11-24: User explicitly approved Phase 2 and instructed start of Phase 3.
+- 2026-11-24: Phase 3 implementation reached `READY_FOR_REVIEW`; user review is pending.
