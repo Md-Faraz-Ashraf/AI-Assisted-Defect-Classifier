@@ -10,4 +10,4 @@ backend-dev:
 	cd backend && uvicorn app.main:app --reload
 
 backend-check:
-	cd backend && ruff check . && ruff format --check . && pytest
+	cd backend && ruff check . && ruff format --check . && mypy app && pytest
