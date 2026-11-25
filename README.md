@@ -1,81 +1,164 @@
-# AI-Assisted Manufacturing Quality Inspection
+# AI-Assisted Defect Classifier
 
-Monorepo for a human-reviewed manufacturing inspection workflow. The AI recommends a classification; a Quality Engineer makes and submits the final decision.
-
-## Current status
-
-This repository is being built in approval-gated phases. Phases 1 and 2 are approved. Phase 2 implements the FastAPI API and deterministic mock AI analysis; Phase 3 integrates a React dashboard and inspection workflow with that API. PostgreSQL support remains a later phase.
-
-## Product overview
-
-The application supports manufacturing Quality Engineers who inspect product images. A configurable AI provider recommends one of five classifications — Scratch, Dent, Paint Issue, Missing Component, or No Defect — and the engineer accepts or overrides that suggestion before submitting an inspection. The original AI prediction and final human decision remain separately traceable. Production Supervisors have read-only access to dashboard and inspection history. Phase 2 currently uses a deterministic mock AI provider; no live vendor/model request is configured yet.
-
-Dashboard calculations use the final human classification: passed means `No Defect`; rejected means any other category; defect rate is rejected divided by all submitted inspections; AI acceptance rate is non-overridden submissions divided by all submissions. Zero-record percentage values are zero.
+Web app and API for analyzing manufacturing inspection images and recording an inspector's review. The frontend calls the same API in both backend modes. The default AI provider is deterministic mock AI; connecting PostgreSQL does not enable a real vision model.
 
 ## Prerequisites
 
-- Node.js 20+ and npm
-- Python 3.11+
 - Git
+- Node.js 20 or newer and npm
+- Python 3.11 or newer
+- PostgreSQL only if using database mode
 
-PostgreSQL and an AI API key are not required for the mock development path.
-
-## Start the frontend
+## Clone the project
 
 ```powershell
-cd frontend
-npm install
-npm run dev
+git clone <repository-url>
+cd "AI- Assisted Defect Classifier"
 ```
 
-Open the URL Vite prints (normally http://localhost:5173). Set `VITE_API_BASE_URL` in `frontend/.env.local` if the API is not at `http://127.0.0.1:8000/api/v1`. The interface uses shadcn/ui components with Tailwind CSS 4. Build and quality commands: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run test -- --run`.
+Replace `<repository-url>` with the repository URL. Run the commands below from the repository root unless a command says to change directories. Start the backend and frontend in separate terminals and keep both running.
 
-## Start the backend
+## Run with mock data (no PostgreSQL required)
+
+Mock mode is the default. It uses in-memory users, batches, and inspection records. Changes are lost when the backend process stops. Images are saved locally.
+
+### Terminal 1: backend
+
+Create a local environment file if you want explicit settings (it is optional for mock mode):
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Ensure `.env` has `APP_MODE=mock` and `AI_PROVIDER=mock`. Then install and start the API:
 
 ```powershell
 cd backend
-py -m venv .venv
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
 
-Health endpoint: http://127.0.0.1:8000/api/v1/health. Interactive API docs: http://127.0.0.1:8000/docs. API examples are in [docs/API.md](docs/API.md).
+On macOS/Linux, activate the environment with `source .venv/bin/activate` instead. If PowerShell prevents activation, use `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in that terminal and activate again.
 
-Backend checks (run from `backend`):
+### Terminal 2: frontend
 
 ```powershell
-python -m pytest
-python -m ruff check .
-python -m ruff format --check .
-python -m mypy app
-python -m compileall -q app
+cd frontend
+npm ci
+npm run dev
 ```
 
-## Configuration
+Open the URL printed by Vite (normally <http://localhost:5173>). The frontend's default API URL is `http://127.0.0.1:8000/api/v1`. The API health check is <http://127.0.0.1:8000/api/v1/health>; interactive API docs are at <http://127.0.0.1:8000/docs>.
 
-Copy `.env.example` to `.env` for local overrides. Never put credentials in source control. The backend reads environment variables through Pydantic Settings. `APP_MODE=mock` is required for the current repository implementation; database mode will be added in Phase 5. `AI_PROVIDER=mock` selects deterministic mock analysis.
+## Run with PostgreSQL (persistent application data)
 
-The AI provider boundary keeps credentials on the backend; the mock demo needs no key. A vision-provider integration boundary is available but no vendor adapter is configured. Uploaded images are validated and stored on the local filesystem with generated safe names. Mock repositories keep users, batches, analyses, and inspections in memory; records reset when the backend restarts. Demo-user selection uses `X-Demo-User: priya` or `X-Demo-User: rahul`; it is a development convenience, not production authentication.
+In database mode, the backend requires a reachable PostgreSQL server and will fail to start if it cannot connect. The PostgreSQL database service must be running before migration, seeding, or starting the API. The default local connection uses host `localhost`, port `5432`, database `quality_inspection`, and role `quality_app`.
 
-Mock analysis has no provider cost. Real inference costs depend on the vendor, model, image resolution, and request volume; provider/model selection is deferred and no live AI cost has been incurred or verified.
+### 1. Start PostgreSQL and create the database and role
 
-## Current API and persistence
+Install PostgreSQL if needed and start its service using your operating system's service manager. Connect to the local server as a PostgreSQL administrator (for example, with `psql -U postgres -h localhost -p 5432`) and create a role and database. Choose your own local password:
 
-The API includes health, users, batches, prediction, inspection create/list/detail, image retrieval, and dashboard summary endpoints under `/api/v1`. PostgreSQL persistence, migrations, and seed/reset commands will be added in Phase 5.
+```sql
+CREATE ROLE quality_app LOGIN PASSWORD 'choose-a-local-password';
+CREATE DATABASE quality_inspection OWNER quality_app;
+```
 
-## Repository layout
+Run these statements only when the role/database do not already exist. If you use different names, host, or port, use those values in `DATABASE_URL` below.
 
-- `frontend/` — React, TypeScript, Vite, Tailwind, Vitest
-- `backend/` — FastAPI, Pydantic Settings, pytest, Ruff
-- `docs/` — implementation checklist, user dependencies, architecture, API and database notes
+### 2. Configure the backend
 
-See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for phase status, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions, and [docs/API.md](docs/API.md) for endpoint contracts. PostgreSQL schema and setup will be documented when implemented and verified.
+From the repository root, create the ignored local environment file and edit it:
 
-## Current limitations
+```powershell
+Copy-Item .env.example .env
+```
 
-- The frontend workflow is integrated with the mock API; demo user selection is a development convenience, not production authentication.
-- Mock repositories are in-memory, so inspections are not persistent across backend restarts.
-- No sample product images or external assets are included.
-- No live AI vendor adapter, PostgreSQL repositories, production authentication, or deployment setup are included at this stage.
-- The persistent PostgreSQL setup path will be documented after its implementation and verification phase.
+Set at least these values in `.env`:
+
+```dotenv
+APP_MODE=database
+DATABASE_URL=postgresql+psycopg://quality_app:YOUR_PASSWORD@localhost:5432/quality_inspection
+AI_PROVIDER=mock
+```
+
+Replace `YOUR_PASSWORD` with the role password. URL-encode reserved characters in the password (for example, `@` becomes `%40`). Keep `.env` private; it is excluded by `.gitignore`. Do not put database credentials in frontend environment files.
+
+### 3. Create tables and seed initial data
+
+In a backend terminal, install dependencies and run the Alembic migrations and seed script. The migration creates the `users`, `batches`, and `inspections` application tables (plus Alembic's migration-version bookkeeping table). The seed adds/updates two demo users and three demo batches. It is safe to rerun and does not delete inspection data.
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+python -m alembic upgrade head
+python -m scripts.seed
+```
+
+Alembic creates the tables; the seed command only populates the initial demo users and batches. Run both commands against the intended database after confirming `.env` is set to `APP_MODE=database` and the PostgreSQL service is running.
+
+### 4. Start the API and frontend
+
+Keep the backend terminal in `backend` and start the API:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+In a second terminal, from the repository root, start the frontend:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open <http://localhost:5173>. Confirm <http://127.0.0.1:8000/api/v1/health> reports `{"status":"ok"}`. The demo user and batch lists should include Priya, Rahul, and BATCH-001 through BATCH-003. Submitted inspections persist in PostgreSQL and remain available after restarting the backend.
+
+### Reset database data (destructive)
+
+This command deletes all inspection, batch, and user rows. It is not part of normal setup, migration, or seeding. Run only when you intend to clear that data, then reseed:
+
+```powershell
+cd backend
+python -m scripts.reset_database --confirm RESET-QUALITY-INSPECTION-DATA
+python -m scripts.seed
+```
+
+## Switching modes
+
+Set `APP_MODE=mock` or `APP_MODE=database` in the repository root `.env`, then restart the backend. If `.env` is absent, backend defaults to mock mode. Both modes use the same API models and endpoints. Mock mode keeps application records in process memory; database mode stores them in PostgreSQL. Uploaded image files are stored locally in `backend/var/images` when using the commands above; this path is ignored by Git. Image files are not stored inside PostgreSQL.
+
+## Configuration reference
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `APP_MODE` | `mock` | Backend persistence: `mock` or `database`. |
+| `DATABASE_URL` | Local example URL | PostgreSQL connection used by migrations, seed, and database mode. |
+| `AI_PROVIDER` | `mock` | AI adapter. The repository currently uses mock predictions. |
+| `API_HOST` / `API_PORT` | `127.0.0.1` / `8000` | Backend bind address and port. |
+| `FRONTEND_ORIGIN` | `http://localhost:5173` | Allowed browser origin for API requests. |
+| `IMAGE_STORAGE_PATH` | `./var/images` | Local image storage path, relative to backend working directory. |
+| `VITE_API_BASE_URL` | `http://127.0.0.1:8000/api/v1` | Optional frontend API base URL; set in `frontend/.env.local` if the API runs elsewhere. |
+
+## Checks
+
+Backend checks (from `backend`, with its virtual environment active):
+
+```powershell
+ruff check .
+mypy app
+pytest
+```
+
+Frontend checks (from `frontend`):
+
+```powershell
+npm run typecheck
+npm run lint
+npm test -- --run
+npm run build
+```

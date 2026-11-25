@@ -17,5 +17,6 @@ dist/
 coverage/
 .vite/
 var/
+backend/.test-tmp-phase5/
 *.log
 .DS_Store

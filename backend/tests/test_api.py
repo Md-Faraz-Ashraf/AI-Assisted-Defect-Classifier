@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 
@@ -50,6 +51,7 @@ def test_quality_engineer_can_predict_and_submit_with_original_prediction_preser
     predicted = request_prediction(client, engineer_headers, png_bytes)
     assert predicted.status_code == 201
     body = predicted.json()
+    assert body["status"] == "UNREVIEWED"
     assert body["prediction"]["defect_type"] in [item.value for item in DefectType]
     assert 0 <= body["prediction"]["confidence"] <= 1
     assert body["prediction"]["provider"] == "mock"
@@ -67,6 +69,8 @@ def test_quality_engineer_can_predict_and_submit_with_original_prediction_preser
     )
     assert submitted.status_code == 201
     record = submitted.json()
+    assert record["id"] == body["analysis_id"]
+    assert record["status"] == "REVIEWED"
     assert record["original_ai_prediction"] == body["prediction"]["defect_type"]
     assert record["final_defect_type"] == final_type
     assert record["was_overridden"] is True
@@ -360,15 +364,30 @@ def test_uploaded_name_is_not_used_and_image_route_is_safe(client, engineer_head
     assert traversal.status_code in (404, 422)
 
 
-def test_database_mode_fails_instead_of_falling_back(tmp_path):
-    with pytest.raises(RuntimeError, match="APP_MODE=database"):
-        create_app(Settings(app_mode="database", image_storage_path=str(tmp_path)))
+def test_database_mode_fails_instead_of_falling_back(monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    from app.dependencies import container as container_module
+
+    monkeypatch.setattr(
+        container_module,
+        "make_engine",
+        lambda _: (_ for _ in ()).throw(
+            OperationalError("connect", {}, OSError("database unavailable"))
+        ),
+    )
+    with pytest.raises(RuntimeError, match="requires a reachable PostgreSQL database"):
+        container_module.build_container(
+            Settings(app_mode="database", image_storage_path=f"var/test-images-{uuid4()}")
+        )
 
 
-def test_vision_provider_boundary_fails_clearly_without_falling_back(tmp_path, png_bytes):
+def test_vision_provider_boundary_fails_clearly_without_falling_back(png_bytes):
     from fastapi.testclient import TestClient
 
-    app = create_app(Settings(ai_provider="vision", image_storage_path=str(tmp_path)))
+    app = create_app(
+        Settings(ai_provider="vision", image_storage_path=f"var/test-images-{uuid4()}")
+    )
     with TestClient(app) as vision_client:
         response = request_prediction(vision_client, {"X-Demo-User": "priya"}, png_bytes)
     assert response.status_code == 503

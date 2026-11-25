@@ -12,6 +12,7 @@ from app.models.domain import (
     Batch,
     DefectType,
     Inspection,
+    InspectionStatus,
     PendingAnalysis,
     Prediction,
     User,
@@ -96,6 +97,7 @@ class InspectionService:
         self.container.analyses.add(analysis)
         return AIResponse(
             analysis_id=analysis.id,
+            status=InspectionStatus.UNREVIEWED,
             batch_id=batch.id,
             image_url=f"/api/v1/images/{image_ref}",
             prediction=PredictionResponse(
@@ -125,7 +127,7 @@ class InspectionService:
 
         now = datetime.now(UTC)
         inspection = Inspection(
-            id=str(uuid4()),
+            id=analysis.id,
             batch_id=batch.id,
             inspector_id=user.id,
             image_ref=analysis.image_ref,
@@ -138,11 +140,10 @@ class InspectionService:
             comments=payload.comments,
             inspected_at=now,
         )
-        if not self.container.analyses.mark_submitted(analysis.id):
+        if not self.container.submissions.submit_pending(analysis.id, inspection):
             raise AppError(
                 409, "analysis_already_submitted", "This AI analysis was already submitted."
             )
-        self.container.inspections.add(inspection)
         return self._inspection_response(inspection, batch, user.name)
 
     def list_inspections(
@@ -212,6 +213,7 @@ class InspectionService:
     ) -> InspectionResponse:
         return InspectionResponse(
             id=inspection.id,
+            status=InspectionStatus.REVIEWED,
             batch_id=inspection.batch_id,
             batch_number=batch.batch_number,
             product_name=batch.product_name,

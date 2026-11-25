@@ -20,8 +20,8 @@ Missing or unknown selection returns `401`; forbidden mutations return `403`.
 | `GET /health` | No | Process health |
 | `GET /users` | No | Seeded demo users, for user selection |
 | `GET /batches` | Yes | Seeded manufacturing batches |
-| `POST /ai/predict` | Quality Engineer | Validate/store image, request a prediction, create pending analysis |
-| `POST /inspections` | Quality Engineer | Submit final human decision for a pending analysis |
+| `POST /ai/predict` | Quality Engineer | Validate/store image, request a prediction, create an `UNREVIEWED` inspection record |
+| `POST /inspections` | Quality Engineer | Transition the existing record to `REVIEWED` with the human decision |
 | `GET /inspections` | Yes | Filtered, sorted, paginated inspection history |
 | `GET /inspections/{inspection_id}` | Yes | Inspection detail |
 | `GET /dashboard/summary` | Yes | Server-calculated quality metrics |
@@ -34,6 +34,7 @@ Missing or unknown selection returns `401`; forbidden mutations return `403`.
 ```json
 {
   "analysis_id": "a server-generated identifier",
+  "status": "UNREVIEWED",
   "batch_id": "BATCH-001",
   "image_url": "/api/v1/images/a-generated-reference.png",
   "prediction": {
@@ -46,11 +47,13 @@ Missing or unknown selection returns `401`; forbidden mutations return `403`.
 }
 ```
 
+The API's `analysis_id` is the UUID primary key of that row. In PostgreSQL mode it is created in `inspections` with status `UNREVIEWED`; a successful submission updates that same row to `REVIEWED`. No second analysis/inspection row is created.
+
 The mock provider is deterministic for the same image. Its confidence is an indicative model-reported score, not a calibrated probability. It is not a real AI analysis. A failed provider response never becomes `No Defect`.
 
 ## Submit the human decision
 
-`POST /api/v1/inspections` accepts JSON. The browser submits only the pending analysis ID, final defect, and optional comment; AI output, confidence, role, and override status are loaded or calculated by the server.
+`POST /api/v1/inspections` accepts JSON. The browser submits only the unreviewed analysis ID, final defect, and optional comment; AI output, confidence, role, and override status are loaded or calculated by the server.
 
 ```json
 {
@@ -60,7 +63,7 @@ The mock provider is deterministic for the same image. Its confidence is an indi
 }
 ```
 
-The server verifies the analysis owner, batch, and image; prevents resubmission; preserves the original prediction; and calculates `was_overridden = original_ai_prediction != final_defect_type`.
+The server verifies the record owner, batch, and image; prevents resubmission; preserves the original prediction; calculates `was_overridden = original_ai_prediction != final_defect_type`; and returns the completed record with status `REVIEWED`.
 
 ## History filters and pagination
 
@@ -114,7 +117,7 @@ curl.exe -H "X-Demo-User: priya" http://127.0.0.1:8000/api/v1/batches
 curl.exe -H "X-Demo-User: priya" -F "batch_id=BATCH-001" -F "image=@C:\temp\product.png;type=image/png" http://127.0.0.1:8000/api/v1/ai/predict
 ```
 
-Copy `analysis_id` from the prediction response and submit it (replace the example ID):
+Copy `analysis_id` from the prediction response and submit it (replace the example ID). In database mode, this ID identifies the `UNREVIEWED` row and is transitioned to `REVIEWED` on successful submission:
 
 ```powershell
 curl.exe -H "X-Demo-User: priya" -H "Content-Type: application/json" -d '{"analysis_id":"REPLACE_WITH_ANALYSIS_ID","final_defect_type":"No Defect","comments":"Reviewed manually."}' http://127.0.0.1:8000/api/v1/inspections

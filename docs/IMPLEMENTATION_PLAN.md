@@ -2,10 +2,13 @@
 
 ## Overall progress
 
-- Current phase: Phase 3 — Build React and Integrate with Backend
+- Current phase: Phase 5 — Pluggable PostgreSQL Integration
 - Phase 1 status: `APPROVED`
 - Phase 2 status: `APPROVED`
-- Phase 3 status: `READY_FOR_REVIEW`
+- Phase 3 status: `APPROVED`
+- Phase 4 status: `APPROVED`
+- Phase 5 status: `APPROVED`
+- Proposed Phase 6 status: `NOT_STARTED` (not present in the supplied five-phase master prompt; requires owner approval as a plan amendment)
 - Later phases remain `NOT_STARTED` and will not begin until the preceding phase is explicitly approved.
 
 Statuses: `NOT_STARTED`, `IN_PROGRESS`, `READY_FOR_REVIEW`, `APPROVED`, `BLOCKED`, `REJECTED`, `COMPLETED`.
@@ -49,17 +52,39 @@ Phase status: `APPROVED`
 | P3-04 | Build engineer-only upload, AI prediction, accept/override, comments, and submission flow | COMPLETED | P3-01, P3-02 | Zod validates JPEG/PNG/WebP and 5 MiB limit; final category is required; request mutation invalidates dashboard/history and navigates on success. Supervisor link and route are role-gated in the UI; backend remains authoritative. | No |
 | P3-05 | Add typed API client, cancellation, query keys, demo-user selector and role indicator | COMPLETED | P3-01 | API client tests cover demo header, query filters, multipart upload and structured API errors; queries pass TanStack cancellation signals. | No |
 | P3-06 | Run frontend checks and API integration smoke | COMPLETED | P3-01–P3-05 | `npm run typecheck`, lint (0 errors), Prettier, Vitest (5 passed), and production build passed. Existing Phase 2 backend integration suite has 30 passing cases. Direct Uvicorn loopback smoke was attempted but Windows sandbox denied the socket (`WinError 10013`); combined browser-to-live-API flow remains for Phase 4 verification. `npm audit --omit=dev` could not reach registry DNS. | No |
-| P3-07 | User verification and approval to proceed | NOT_STARTED | P3-01–P3-06 | User reviews the screens and confirms before Phase 4. | Yes |
+| P3-07 | User verification and approval to proceed | APPROVED | P3-01–P3-06 | User explicitly approved Phase 3 on 2026-11-24. User had reported end-to-end mock backend verification. | Yes |
 
-Phase status: `READY_FOR_REVIEW`
+Phase status: `APPROVED`
 
 ## Phase 4 — Verify Complete Mock Flow
 
-Phase status: `NOT_STARTED`
+| Task ID | Description | Status | Dependencies | Verification method / actual result | User input required? |
+|---|---|---|---|---|---|
+| P4-01 | Verify acceptance, override, No Defect metrics, supervisor permissions, and API error handling | COMPLETED | Phase 3 approved | Existing Phase 2 API tests cover all listed backend cases (30 passed in recorded Phase 2 run; see `docs/MOCK_FLOW_VERIFICATION.md`). Frontend checks pass (5 tests), but UI-specific manual cases are not individually confirmed. | No |
+| P4-02 | Verify complete workflow through browser and live HTTP API; record evidence | APPROVED | P4-01 | User explicitly reported manual verification of Phase 4 on 2026-11-24. Local socket test attempts in this environment were denied/stalled; user performed the manual end-to-end verification. | Yes |
+| P4-03 | User confirmation before Phase 5 | APPROVED | P4-01–P4-02 | User confirmed: “Manually verified phase 4!” on 2026-11-24. | Yes |
+
+Phase status: `APPROVED`
 
 ## Phase 5 — Pluggable PostgreSQL Integration
 
-Phase status: `NOT_STARTED`
+Database lifecycle decision: use exactly three application tables (`users`, `batches`, `inspections`). A prediction creates one `inspections` row with `UNREVIEWED`; the engineer's submission updates that same row to `REVIEWED`. The API analysis identifier is the row's UUID. There is no `pending_analyses` table.
+
+| Task ID | Description | Status | Dependencies | Verification method / actual result | User input required? |
+|---|---|---|---|---|---|
+| P5-01 | Add SQLAlchemy, PostgreSQL driver, settings, and database session lifecycle | COMPLETED | Phase 4 approved | Installed SQLAlchemy/Alembic/Psycopg; DB mode explicitly checks the PostgreSQL connection and fails without mock fallback. | No |
+| P5-02 | Implement three-table schema and PostgreSQL repository adapters | COMPLETED | P5-01 | Shared API/domain services; prediction inserts `UNREVIEWED`; submission transaction updates the same row to `REVIEWED`; reads/dashboard exclude unreviewed records. | No |
+| P5-03 | Add Alembic migration, repeatable seed, explicit reset, and database docs | COMPLETED | P5-01, P5-02 | Initial migration test verifies only users, batches, inspections, and Alembic bookkeeping are created; seed test runs twice without duplicates. | No |
+| P5-04 | Test persistence adapters, status transition, rollback, API contract, and mock regressions | COMPLETED | P5-01–P5-03 | Backend suite: 35 passed; Ruff lint/format and Mypy passed. Frontend typecheck, lint (0 errors, 4 warnings), Prettier, Vitest (5 passed), and production build passed. SQLite migration test confirms three application tables and no `pending_analyses`. | No |
+| P5-05 | Verify local PostgreSQL migration/seed, HTTP lifecycle, restart persistence, and user review | APPROVED | P5-01–P5-04 | Connected with local `.env`; migration `20261124_01` and seed succeeded. User completed the database-mode end-to-end flow and confirmed it works. PostgreSQL contains 4 reviewed inspections; a newly constructed backend app instance returned all 4 in history and dashboard. | Yes |
+
+Phase status: `APPROVED`
+
+## Proposed Phase 6 — Real Vision Provider Integration
+
+The supplied master prompt ends at Phase 5 and does not schedule a live vendor adapter. Phase 2 delivered only the provider contract and deterministic mock. This proposed phase would add a selected vendor SDK/client, backend-only credential configuration, structured response parsing, timeout/rate-limit/error handling, and provider-specific tests, while retaining mock mode. It requires owner approval as a plan amendment and selection of a provider/model plus a locally configured API key. No live-model calls should be made before that approval and configuration.
+
+Phase status: `NOT_STARTED` (proposed; plan amendment not yet approved)
 
 ## Technical decisions and assumptions
 
@@ -87,15 +112,18 @@ Phase 2 verification evidence:
 - OpenAPI is generated from the running FastAPI app; automated test checks the Phase 2 endpoints are present.
 - The local mock API needs neither PostgreSQL nor an AI key. Live vision analysis remains unverified and needs user selection of a provider/model and local credential configuration.
 
-Phase 2 was explicitly approved by the user on 2026-11-24. Phase 3 is in progress.
+Phase 2 was explicitly approved by the user on 2026-11-24. Phase 3 was approved by the user; Phase 4 verification is in progress.
 
 ## Open questions
 
-- Which real AI provider/model to use is deferred until the provider phase; mock provider remains the planned default.
+- A real vision adapter is not assigned to any of the supplied five phases. Phase 2 implements only the provider boundary and mock. A proposed Phase 6 is recorded above, pending owner approval and provider/model selection.
 - PostgreSQL connection details are only needed for Phase 5.
 
 ## User approval history
 
 - 2026-11-24: User explicitly approved Phase 1 and instructed start of Phase 2 (`"project is pushed to git. please start phase 2"`).
 - 2026-11-24: User explicitly approved Phase 2 and instructed start of Phase 3.
-- 2026-11-24: Phase 3 implementation reached `READY_FOR_REVIEW`; user review is pending.
+- 2026-11-24: Phase 3 implementation reached `READY_FOR_REVIEW`; user approved Phase 3 and proceeding to Phase 4.
+- 2026-11-24: User manually verified and approved Phase 4; Phase 5 started.
+- 2026-11-25: User confirmed database-mode end-to-end workflow works; Phase 5 approved.
+- 2026-11-24: Identified that live vision-model implementation is not assigned in the five-phase prompt; proposed a separate Phase 6 after Phase 5, pending approval.

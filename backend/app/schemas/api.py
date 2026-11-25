@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.domain import DefectType, UserRole
+from app.models.domain import DefectType, InspectionStatus, UserRole
 
 
 class DomainResponse(BaseModel):
@@ -31,6 +31,7 @@ class PredictionResponse(BaseModel):
 
 class AIResponse(BaseModel):
     analysis_id: str
+    status: InspectionStatus
     batch_id: str
     image_url: str
     prediction: PredictionResponse
@@ -47,6 +48,7 @@ class InspectionCreate(BaseModel):
 
 class InspectionResponse(BaseModel):
     id: str
+    status: InspectionStatus
     batch_id: str
     batch_number: str
     product_name: str

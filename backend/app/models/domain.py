@@ -16,6 +16,11 @@ class UserRole(StrEnum):
     PRODUCTION_SUPERVISOR = "PRODUCTION_SUPERVISOR"
 
 
+class InspectionStatus(StrEnum):
+    UNREVIEWED = "UNREVIEWED"
+    REVIEWED = "REVIEWED"
+
+
 @dataclass(frozen=True)
 class User:
     id: str
@@ -47,7 +52,11 @@ class PendingAnalysis:
     image_ref: str
     prediction: Prediction
     created_at: datetime
-    submitted: bool = False
+    status: InspectionStatus = InspectionStatus.UNREVIEWED
+
+    @property
+    def submitted(self) -> bool:
+        return self.status == InspectionStatus.REVIEWED
 
 
 @dataclass(frozen=True)

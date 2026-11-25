@@ -1,5 +1,7 @@
 from collections.abc import Iterator
 from io import BytesIO
+from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,10 +12,18 @@ from app.main import create_app
 
 
 @pytest.fixture
-def client(tmp_path) -> Iterator[TestClient]:
-    app = create_app(Settings(image_storage_path=str(tmp_path / "images")))
-    with TestClient(app) as test_client:
-        yield test_client
+def client() -> Iterator[TestClient]:
+    image_path = Path("var") / f"test-images-{uuid4()}"
+    image_path.mkdir(parents=True, exist_ok=True)
+    app = create_app(Settings(image_storage_path=str(image_path)))
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.state.container.close()
+        for image in image_path.iterdir():
+            image.unlink()
+        image_path.rmdir()
 
 
 @pytest.fixture

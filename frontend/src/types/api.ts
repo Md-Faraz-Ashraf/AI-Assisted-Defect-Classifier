@@ -8,6 +8,7 @@ export const DEFECT_TYPES = [
 
 export type DefectType = (typeof DEFECT_TYPES)[number];
 export type UserRole = "QUALITY_ENGINEER" | "PRODUCTION_SUPERVISOR";
+export type InspectionStatus = "UNREVIEWED" | "REVIEWED";
 
 export interface DemoUser {
   id: string;
@@ -31,6 +32,7 @@ export interface Prediction {
 
 export interface AIAnalysis {
   analysis_id: string;
+  status: InspectionStatus;
   batch_id: string;
   image_url: string;
   prediction: Prediction;
@@ -39,6 +41,7 @@ export interface AIAnalysis {
 
 export interface Inspection {
   id: string;
+  status: InspectionStatus;
   batch_id: string;
   batch_number: string;
   product_name: string;

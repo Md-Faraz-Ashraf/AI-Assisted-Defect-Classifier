@@ -28,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.2.0",
     )
     application.state.container = container
+    application.router.on_shutdown.append(container.close)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=[app_settings.frontend_origin],

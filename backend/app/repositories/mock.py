@@ -5,6 +5,7 @@ from app.models.domain import (
     Batch,
     DefectType,
     Inspection,
+    InspectionStatus,
     PendingAnalysis,
     User,
     UserRole,
@@ -51,12 +52,12 @@ class MockPendingAnalysisRepository:
     def get(self, analysis_id: str) -> PendingAnalysis | None:
         return self._analyses.get(analysis_id)
 
-    def mark_submitted(self, analysis_id: str) -> bool:
+    def mark_reviewed(self, analysis_id: str) -> bool:
         with self._submission_lock:
             analysis = self._analyses.get(analysis_id)
             if analysis is None or analysis.submitted:
                 return False
-            analysis.submitted = True
+            analysis.status = InspectionStatus.REVIEWED
             return True
 
 
@@ -114,3 +115,24 @@ class MockInspectionRepository:
         for inspection in self._inspections.values():
             counts[inspection.final_defect_type] += 1
         return counts
+
+
+class MockInspectionSubmissionRepository:
+    """Atomically marks an analysis submitted and stores its inspection in mock mode."""
+
+    def __init__(
+        self,
+        analyses: MockPendingAnalysisRepository,
+        inspections: MockInspectionRepository,
+    ) -> None:
+        self.analyses = analyses
+        self.inspections = inspections
+        self._lock = Lock()
+
+    def submit_pending(self, analysis_id: str, inspection: Inspection) -> bool:
+        with self._lock:
+            analysis = self.analyses.get(analysis_id)
+            if analysis is None or analysis.submitted:
+                return False
+            self.inspections.add(inspection)
+            return self.analyses.mark_reviewed(analysis_id)
