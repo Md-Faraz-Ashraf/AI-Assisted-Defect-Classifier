@@ -9,6 +9,30 @@ Web app and API for analyzing manufacturing inspection images and recording an i
 - Python 3.11 or newer
 - PostgreSQL only if using database mode
 
+## Install the commit checks
+
+The repository uses the Python `pre-commit` framework to block commits unless both frontend and backend tests pass, npm and Python dependency audits pass, and formatting, lint, and type checks pass. The dependency audits contact public vulnerability databases, so a network outage or an audit finding blocks the commit until it can be resolved or rerun.
+
+Backend tests run with `APP_ENV=test`, `APP_MODE=mock`, and `AI_PROVIDER=mock` set by the hook, so they do not depend on local `.env` credentials, database settings, or live AI calls.
+
+After creating the backend virtual environment, install the development tools and install the Git hook from the repository root. Keep the backend virtual environment activated while running these commands:
+
+```powershell
+cd backend
+python -m pip install -e ".[dev]"
+cd ..
+python -m pre_commit install
+```
+
+Verify the hook is installed and run the gate once across the repository:
+
+```powershell
+Test-Path .git/hooks/pre-commit
+python -m pre_commit run --all-files
+```
+
+`Test-Path` should return `True`. After installation, Git runs the same full gate automatically before every `git commit`. You can reinstall it with `python -m pre_commit install` if the hook file is removed. Do not use `git commit --no-verify` if you need the checks enforced.
+
 ## Clone the project
 
 ```powershell

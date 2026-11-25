@@ -1,13 +1,10 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+  - repo: local
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: detect-private-key
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.0
-    hooks:
-      - id: ruff
-      - id: ruff-format
+      - id: project-quality-gate
+        name: Unit tests, security audits, formatting, and lint
+        entry: python scripts/pre_commit_checks.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
