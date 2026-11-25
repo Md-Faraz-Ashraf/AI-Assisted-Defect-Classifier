@@ -39,10 +39,10 @@ def database():
     with sessions.begin() as session:
         session.add_all(
             [
-                UserRow(id="priya", name="Priya", role="QUALITY_ENGINEER"),
-                UserRow(id="rahul", name="Rahul", role="PRODUCTION_SUPERVISOR"),
+                UserRow(user_id="1", name="Priya", role="QUALITY_ENGINEER"),
+                UserRow(user_id="2", name="Rahul", role="PRODUCTION_SUPERVISOR"),
                 BatchRow(
-                    id="BATCH-001",
+                    batch_id="BATCH-001",
                     batch_number="BATCH-001",
                     product_name="Steel Bracket X200",
                     production_line="Line 3",
@@ -56,9 +56,9 @@ def database():
 
 def make_analysis(analysis_id: str | None = None) -> PendingAnalysis:
     return PendingAnalysis(
-        id=analysis_id or str(uuid4()),
+        inspection_id=analysis_id or str(uuid4()),
         batch_id="BATCH-001",
-        inspector_id="priya",
+        inspector_id="1",
         image_ref="generated.png",
         prediction=Prediction(DefectType.SCRATCH, 0.82, "mock", "deterministic-mock-v1"),
         created_at=datetime.now(UTC),
@@ -67,9 +67,9 @@ def make_analysis(analysis_id: str | None = None) -> PendingAnalysis:
 
 def make_inspection(inspection_id: str | None = None) -> Inspection:
     return Inspection(
-        id=inspection_id or str(uuid4()),
+        inspection_id=inspection_id or str(uuid4()),
         batch_id="BATCH-001",
-        inspector_id="priya",
+        inspector_id="1",
         image_ref="generated.png",
         original_ai_prediction=DefectType.SCRATCH,
         ai_confidence=0.82,
@@ -89,21 +89,21 @@ def test_database_repositories_round_trip_filter_and_aggregate(database):
     analyses = PostgresInspectionLifecycleRepository(sessions)
     inspections = PostgresInspectionRepository(sessions)
     submissions = PostgresInspectionSubmissionRepository(sessions)
-    assert users.get_user("priya").name == "Priya"
-    assert users.get_user("rahul").role.value == "PRODUCTION_SUPERVISOR"
+    assert users.get_user("1").name == "Priya"
+    assert users.get_user("2").role.value == "PRODUCTION_SUPERVISOR"
     assert batches.get_batch("BATCH-001").product_name == "Steel Bracket X200"
 
     pending = make_analysis()
     analyses.add(pending)
-    record = make_inspection(pending.id)
-    assert submissions.submit_pending(pending.id, record) is True
-    assert submissions.submit_pending(pending.id, make_inspection()) is False
-    assert analyses.get(pending.id).submitted is True
-    assert inspections.get(record.id).original_ai_prediction == DefectType.SCRATCH
+    record = make_inspection(pending.inspection_id)
+    assert submissions.submit_pending(pending.inspection_id, record) is True
+    assert submissions.submit_pending(pending.inspection_id, make_inspection()) is False
+    assert analyses.get(pending.inspection_id).submitted is True
+    assert inspections.get(record.inspection_id).original_ai_prediction == DefectType.SCRATCH
     rows, total = inspections.list_page(
         defect_type=DefectType.DENT,
         batch_id="BATCH-001",
-        inspector_id="priya",
+        inspector_id="1",
         date_from=None,
         date_to=None,
         page=1,
@@ -111,7 +111,7 @@ def test_database_repositories_round_trip_filter_and_aggregate(database):
         sort_by="inspected_at",
         sort_order="desc",
     )
-    assert total == 1 and rows[0].id == record.id
+    assert total == 1 and rows[0].inspection_id == record.inspection_id
     assert inspections.dashboard_counts()[DefectType.DENT] == 1
     assert inspections.dashboard_accepted_count() == 0
 
@@ -122,17 +122,17 @@ def test_failed_review_update_rolls_back_status_change(database):
     submissions = PostgresInspectionSubmissionRepository(sessions)
     pending = make_analysis()
     analyses.add(pending)
-    first = make_inspection(pending.id)
-    assert submissions.submit_pending(pending.id, first)
+    first = make_inspection(pending.inspection_id)
+    assert submissions.submit_pending(pending.inspection_id, first)
 
     second_pending = make_analysis()
     analyses.add(second_pending)
-    inconsistent = make_inspection(second_pending.id)
+    inconsistent = make_inspection(second_pending.inspection_id)
     inconsistent = replace(inconsistent, was_overridden=False)
     with pytest.raises(IntegrityError):
-        submissions.submit_pending(second_pending.id, inconsistent)
+        submissions.submit_pending(second_pending.inspection_id, inconsistent)
 
-    assert analyses.get(second_pending.id).submitted is False
+    assert analyses.get(second_pending.inspection_id).submitted is False
     with sessions() as session:
         assert (
             session.scalar(

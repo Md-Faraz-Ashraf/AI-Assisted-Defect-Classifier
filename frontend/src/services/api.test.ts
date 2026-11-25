@@ -16,7 +16,7 @@ describe("typed API client", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await api.listInspections("rahul", {
+    await api.listInspections("2", {
       page: 2,
       page_size: 10,
       defect_type: "Dent",
@@ -26,7 +26,7 @@ describe("typed API client", () => {
     expect(url).toContain("/inspections?");
     expect(url).toContain("defect_type=Dent");
     expect(options.headers).toBeInstanceOf(Headers);
-    expect((options.headers as Headers).get("X-Demo-User")).toBe("rahul");
+    expect((options.headers as Headers).get("X-User-Id")).toBe("2");
     expect(options.signal).toBeUndefined();
   });
 
@@ -43,7 +43,7 @@ describe("typed API client", () => {
     vi.stubGlobal("fetch", fetchMock);
     const image = new File(["image"], "part.png", { type: "image/png" });
 
-    await api.predict("priya", "b1", image);
+    await api.predict("1", "b1", image);
 
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(options.body).toBeInstanceOf(FormData);
@@ -68,7 +68,7 @@ describe("typed API client", () => {
       ),
     );
 
-    await expect(api.getDashboard("rahul")).rejects.toMatchObject({
+    await expect(api.getDashboard("2")).rejects.toMatchObject({
       name: "ApiError",
       code: "forbidden",
       status: 403,

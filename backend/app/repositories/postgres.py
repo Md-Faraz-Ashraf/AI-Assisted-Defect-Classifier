@@ -18,12 +18,12 @@ from app.models.domain import (
 
 
 def _user(row: UserRow) -> User:
-    return User(id=row.id, name=row.name, role=UserRole(row.role))
+    return User(user_id=row.user_id, name=row.name, role=UserRole(row.role))
 
 
 def _batch(row: BatchRow) -> Batch:
     return Batch(
-        id=row.id,
+        batch_id=row.batch_id,
         batch_number=row.batch_number,
         product_name=row.product_name,
         production_line=row.production_line,
@@ -32,7 +32,7 @@ def _batch(row: BatchRow) -> Batch:
 
 def _inspection(row: InspectionRow) -> Inspection:
     return Inspection(
-        id=row.id,
+        inspection_id=row.inspection_id,
         batch_id=row.batch_id,
         inspector_id=row.inspector_id,
         image_ref=row.image_ref,
@@ -53,7 +53,9 @@ class PostgresUserRepository:
 
     def list_users(self) -> list[User]:
         with self.sessions() as session:
-            return [_user(row) for row in session.scalars(select(UserRow).order_by(UserRow.id))]
+            return [
+                _user(row) for row in session.scalars(select(UserRow).order_by(UserRow.user_id))
+            ]
 
     def get_user(self, user_id: str) -> User | None:
         with self.sessions() as session:
@@ -83,7 +85,7 @@ class PostgresInspectionLifecycleRepository:
     @staticmethod
     def _domain(row: InspectionRow) -> PendingAnalysis:
         return PendingAnalysis(
-            id=row.id,
+            inspection_id=row.inspection_id,
             batch_id=row.batch_id,
             inspector_id=row.inspector_id,
             image_ref=row.image_ref,
@@ -101,7 +103,7 @@ class PostgresInspectionLifecycleRepository:
         with self.sessions.begin() as session:
             session.add(
                 InspectionRow(
-                    id=analysis.id,
+                    inspection_id=analysis.inspection_id,
                     status=analysis.status.value,
                     batch_id=analysis.batch_id,
                     inspector_id=analysis.inspector_id,
@@ -143,7 +145,7 @@ class PostgresInspectionRepository:
         with self.sessions() as session:
             row = session.scalar(
                 select(InspectionRow).where(
-                    InspectionRow.id == inspection_id,
+                    InspectionRow.inspection_id == inspection_id,
                     InspectionRow.status == InspectionStatus.REVIEWED.value,
                 )
             )
@@ -177,7 +179,11 @@ class PostgresInspectionRepository:
 
         sort_column = self._sort_columns[sort_by]
         ordering = sort_column.asc() if sort_order == "asc" else sort_column.desc()
-        tie_breaker = InspectionRow.id.asc() if sort_order == "asc" else InspectionRow.id.desc()
+        tie_breaker = (
+            InspectionRow.inspection_id.asc()
+            if sort_order == "asc"
+            else InspectionRow.inspection_id.desc()
+        )
         with self.sessions() as session:
             total = (
                 session.scalar(select(func.count()).select_from(InspectionRow).where(*filters)) or 0
@@ -227,7 +233,9 @@ class PostgresInspectionSubmissionRepository:
             return False
         with self.sessions.begin() as session:
             analysis_row = session.scalar(
-                select(InspectionRow).where(InspectionRow.id == analysis_id).with_for_update()
+                select(InspectionRow)
+                .where(InspectionRow.inspection_id == analysis_id)
+                .with_for_update()
             )
             if analysis_row is None or analysis_row.status != InspectionStatus.UNREVIEWED.value:
                 return False

@@ -30,7 +30,7 @@ def client() -> Iterator[TestClient]:
 
 @pytest.fixture
 def engineer_headers() -> dict[str, str]:
-    return {"X-Demo-User": "priya"}
+    return {"X-User-Id": "1"}
 
 
 def make_png(color: tuple[int, int, int] = (30, 120, 90)) -> bytes:

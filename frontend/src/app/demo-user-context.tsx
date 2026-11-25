@@ -16,7 +16,13 @@ const DemoUserContext = createContext<DemoUserContextValue | null>(null);
 const STORAGE_KEY = "quality-inspection-demo-user";
 
 function getInitialDemoUser(): string {
-  return localStorage.getItem(STORAGE_KEY) ?? "priya";
+  const savedId = localStorage.getItem(STORAGE_KEY);
+  if (savedId === "priya" || savedId === "rahul") {
+    const migratedId = savedId === "priya" ? "1" : "2";
+    localStorage.setItem(STORAGE_KEY, migratedId);
+    return migratedId;
+  }
+  return savedId ?? "1";
 }
 
 export function DemoUserProvider({

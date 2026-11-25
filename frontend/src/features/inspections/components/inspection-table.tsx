@@ -42,7 +42,7 @@ export function InspectionTable({
         </TableHeader>
         <TableBody>
           {inspections.map((inspection) => (
-            <TableRow key={inspection.id}>
+            <TableRow key={inspection.inspection_id}>
               <TableCell>
                 <ProtectedImage
                   imageRef={inspection.image_ref}

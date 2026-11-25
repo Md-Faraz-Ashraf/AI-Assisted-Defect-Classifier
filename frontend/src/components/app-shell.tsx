@@ -33,7 +33,9 @@ const navigation = [
 export function AppShell() {
   const { demoUserId, setDemoUserId } = useDemoUser();
   const usersQuery = useUsers();
-  const currentUser = usersQuery.data?.find((user) => user.id === demoUserId);
+  const currentUser = usersQuery.data?.find(
+    (user) => user.user_id === demoUserId,
+  );
   const roleLabel =
     currentUser?.role === "QUALITY_ENGINEER"
       ? "Quality Engineer"
@@ -143,7 +145,7 @@ export function AppShell() {
                 </SelectTrigger>
                 <SelectContent align="end">
                   {usersQuery.data?.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
+                    <SelectItem key={user.user_id} value={user.user_id}>
                       {user.name} ·{" "}
                       {user.role === "QUALITY_ENGINEER"
                         ? "Engineer"

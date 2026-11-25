@@ -23,7 +23,7 @@ Prediction uploads and validates an image, verifies the batch, asks the configur
 
 Submission accepts only the analysis ID, final classification, and optional comment. The server checks ownership, batch, stored image, preserves original prediction/provider metadata, computes the override flag, and prevents a second submission. In PostgreSQL mode it updates that same row to `REVIEWED` in one transaction. History and dashboard queries include reviewed records only. The browser cannot supply an authoritative role, AI prediction/confidence, or override flag.
 
-Demo identity is selected with `X-Demo-User` (`priya` or `rahul`). The role is always looked up in repository data. This is a demo selection mechanism, not production authentication.
+Demo identity is selected with `X-User-Id` (`1` for Priya or `2` for Rahul). The role is always looked up in repository data. This is a demo selection mechanism, not production authentication.
 
 ## Image and AI boundaries
 

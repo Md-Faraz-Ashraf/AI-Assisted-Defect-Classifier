@@ -54,7 +54,7 @@ async function request<T>(
   demoUserId?: string,
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  if (demoUserId) headers.set("X-Demo-User", demoUserId);
+  if (demoUserId) headers.set("X-User-Id", demoUserId);
   if (options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
@@ -139,7 +139,7 @@ export const api = {
       `${API_BASE_URL}/images/${encodeURIComponent(imageRef)}`,
       {
         signal,
-        headers: { "X-Demo-User": demoUserId },
+        headers: { "X-User-Id": demoUserId },
       },
     );
     if (!response.ok) throw await parseError(response);

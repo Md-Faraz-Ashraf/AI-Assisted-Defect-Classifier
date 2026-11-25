@@ -199,7 +199,7 @@ export function NewInspectionPage() {
   };
 
   const selectedBatch = batchesQuery.data?.find(
-    (batch) => batch.id === selectedBatchId,
+    (batch) => batch.batch_id === selectedBatchId,
   );
   const isBusy = analyzeMutation.isPending || submitMutation.isPending;
 
@@ -277,7 +277,10 @@ export function NewInspectionPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {batchesQuery.data?.map((batch) => (
-                            <SelectItem key={batch.id} value={batch.id}>
+                            <SelectItem
+                              key={batch.batch_id}
+                              value={batch.batch_id}
+                            >
                               {batch.batch_number} · {batch.product_name}
                             </SelectItem>
                           ))}

@@ -11,12 +11,12 @@ The frontend and business service/API contracts are the same in both modes. Uplo
 
 | Table | Columns | Purpose |
 |---|---|---|
-| `users` | `id`, `name`, `role`, `created_at` | Demo user identifiers, names, and constrained roles. |
-| `batches` | `id`, `batch_number`, `product_name`, `production_line`, `created_at` | Batch/product/production-line context; batch number is unique. |
-| `inspections` | `id`, `status`, `batch_id`, `inspector_id`, `image_ref`, `original_ai_prediction`, `ai_confidence`, `ai_provider`, `ai_model`, `analyzed_at`, `final_defect_type`, `was_overridden`, `comments`, `inspected_at` | One row per analyzed image; starts `UNREVIEWED`, then becomes `REVIEWED` when the inspector submits a decision. |
+| `users` | `user_id`, `name`, `role`, `created_at` | Demo user identifiers (`1`, `2`), names, and constrained roles. |
+| `batches` | `batch_id`, `batch_number`, `product_name`, `production_line`, `created_at` | Batch/product/production-line context; batch number is unique. |
+| `inspections` | `inspection_id`, `status`, `batch_id`, `inspector_id`, `image_ref`, `original_ai_prediction`, `ai_confidence`, `ai_provider`, `ai_model`, `analyzed_at`, `final_defect_type`, `was_overridden`, `comments`, `inspected_at` | One row per analyzed image; starts `UNREVIEWED`, then becomes `REVIEWED` when the inspector submits a decision. |
 | `alembic_version` | `version_num` | Applied migration revision (Alembic bookkeeping, not an application table). |
 
-The application schema has three tables: `users`, `batches`, and `inspections`. An inspection UUID is also the `analysis_id` returned by prediction, so submission updates the same row rather than creating another row. Status transitions once from `UNREVIEWED` to `REVIEWED`; while unreviewed, final category, override, comments, and inspection time are null. A reviewed row requires its final category and inspection time, and the database verifies `was_overridden`. Seeded user/batch IDs remain stable human-readable keys to preserve the API contract. Foreign keys, category/role/confidence checks, uniqueness for batch numbers, and query indexes enforce integrity. Inspection listing is filtered and paginated in SQL. Dashboard counts and accepted totals include only `REVIEWED` rows and use SQL aggregation.
+The application schema has three tables: `users`, `batches`, and `inspections`. An inspection UUID is also the `analysis_id` returned by prediction, so submission updates the same row rather than creating another row. Status transitions once from `UNREVIEWED` to `REVIEWED`; while unreviewed, final category, override, comments, and inspection time are null. A reviewed row requires its final category and inspection time, and the database verifies `was_overridden`. Seeded user IDs are stable numeric strings (`1`, `2`). Foreign keys, category/role/confidence checks, uniqueness for batch numbers, and query indexes enforce integrity. Inspection listing is filtered and paginated in SQL. Dashboard counts and accepted totals include only `REVIEWED` rows and use SQL aggregation.
 
 ## Local PostgreSQL setup (PowerShell)
 

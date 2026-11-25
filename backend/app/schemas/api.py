@@ -10,13 +10,13 @@ class DomainResponse(BaseModel):
 
 
 class UserResponse(DomainResponse):
-    id: str
+    user_id: str
     name: str
     role: UserRole
 
 
 class BatchResponse(DomainResponse):
-    id: str
+    batch_id: str
     batch_number: str
     product_name: str
     production_line: str
@@ -47,7 +47,7 @@ class InspectionCreate(BaseModel):
 
 
 class InspectionResponse(BaseModel):
-    id: str
+    inspection_id: str
     status: InspectionStatus
     batch_id: str
     batch_number: str

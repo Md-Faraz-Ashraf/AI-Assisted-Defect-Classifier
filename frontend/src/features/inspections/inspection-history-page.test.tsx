@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { InspectionHistoryPage } from "./inspection-history-page";
 
 vi.mock("@/app/demo-user-context", () => ({
-  useDemoUser: () => ({ demoUserId: "priya" }),
+  useDemoUser: () => ({ demoUserId: "1" }),
 }));
 vi.mock("@/services/queries", () => ({
   useBatches: () => ({ isPending: false, isError: false, data: [] }),

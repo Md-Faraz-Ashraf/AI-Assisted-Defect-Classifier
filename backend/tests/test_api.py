@@ -30,19 +30,19 @@ def submit(client, headers, analysis_id, final_defect_type, **extra):
 def test_health_users_and_seeded_batches(client):
     assert client.get("/api/v1/health").json() == {"status": "ok"}
     users = client.get("/api/v1/users").json()
-    assert [(user["id"], user["role"]) for user in users] == [
-        ("priya", "QUALITY_ENGINEER"),
-        ("rahul", "PRODUCTION_SUPERVISOR"),
+    assert [(user["user_id"], user["role"]) for user in users] == [
+        ("1", "QUALITY_ENGINEER"),
+        ("2", "PRODUCTION_SUPERVISOR"),
     ]
-    batches = client.get("/api/v1/batches", headers={"X-Demo-User": "priya"}).json()
+    batches = client.get("/api/v1/batches", headers={"X-User-Id": "1"}).json()
     assert [batch["batch_number"] for batch in batches] == ["BATCH-001", "BATCH-002", "BATCH-003"]
 
 
-def test_missing_or_unknown_demo_user_is_rejected(client):
+def test_missing_or_unknown_user_id_is_rejected(client):
     assert client.get("/api/v1/dashboard/summary").status_code == 401
-    response = client.get("/api/v1/dashboard/summary", headers={"X-Demo-User": "other"})
+    response = client.get("/api/v1/dashboard/summary", headers={"X-User-Id": "other"})
     assert response.status_code == 401
-    assert response.json()["error"]["code"] == "unknown_demo_user"
+    assert response.json()["error"]["code"] == "unknown_user_id"
 
 
 def test_quality_engineer_can_predict_and_submit_with_original_prediction_preserved(
@@ -69,7 +69,7 @@ def test_quality_engineer_can_predict_and_submit_with_original_prediction_preser
     )
     assert submitted.status_code == 201
     record = submitted.json()
-    assert record["id"] == body["analysis_id"]
+    assert record["inspection_id"] == body["analysis_id"]
     assert record["status"] == "REVIEWED"
     assert record["original_ai_prediction"] == body["prediction"]["defect_type"]
     assert record["final_defect_type"] == final_type
@@ -101,8 +101,8 @@ def test_prediction_rejects_unknown_batch(client, engineer_headers, png_bytes):
 @pytest.mark.parametrize(
     ("headers", "path", "method"),
     [
-        ({"X-Demo-User": "rahul"}, "/api/v1/ai/predict", "predict"),
-        ({"X-Demo-User": "rahul"}, "/api/v1/inspections", "submit"),
+        ({"X-User-Id": "2"}, "/api/v1/ai/predict", "predict"),
+        ({"X-User-Id": "2"}, "/api/v1/inspections", "submit"),
     ],
 )
 def test_supervisor_is_forbidden_from_mutations(client, headers, path, method, png_bytes):
@@ -143,7 +143,7 @@ def test_analysis_must_belong_to_same_user_and_cannot_be_submitted_twice(
     client, engineer_headers, png_bytes
 ):
     analysis = request_prediction(client, engineer_headers, png_bytes).json()
-    other_user = submit(client, {"X-Demo-User": "rahul"}, analysis["analysis_id"], "Scratch")
+    other_user = submit(client, {"X-User-Id": "2"}, analysis["analysis_id"], "Scratch")
     assert other_user.status_code == 403
     accepted = submit(
         client,
@@ -164,13 +164,13 @@ def test_analysis_must_belong_to_same_user_and_cannot_be_submitted_twice(
 def test_analysis_cannot_be_submitted_by_another_quality_engineer(
     client, engineer_headers, png_bytes
 ):
-    client.app.state.container.user_repository._users["anita"] = User(
-        "anita", "Anita", UserRole.QUALITY_ENGINEER
+    client.app.state.container.user_repository._users["3"] = User(
+        "3", "Anita", UserRole.QUALITY_ENGINEER
     )
     analysis = request_prediction(client, engineer_headers, png_bytes).json()
     response = submit(
         client,
-        {"X-Demo-User": "anita"},
+        {"X-User-Id": "3"},
         analysis["analysis_id"],
         "Scratch",
     )
@@ -194,9 +194,12 @@ def test_list_filtering_pagination_sorting_and_detail(client, engineer_headers, 
     assert data["page"] == 1
     assert data["total_pages"] == 2
     assert data["items"][0]["final_defect_type"] == "Scratch"
-    detail = client.get(f"/api/v1/inspections/{data['items'][0]['id']}", headers=engineer_headers)
+    detail = client.get(
+        f"/api/v1/inspections/{data['items'][0]['inspection_id']}",
+        headers=engineer_headers,
+    )
     assert detail.status_code == 200
-    assert detail.json()["id"] == data["items"][0]["id"]
+    assert detail.json()["inspection_id"] == data["items"][0]["inspection_id"]
 
 
 def test_filters_by_batch_inspector_and_date_range(client, engineer_headers, png_bytes):
@@ -206,7 +209,7 @@ def test_filters_by_batch_inspector_and_date_range(client, engineer_headers, png
         "/api/v1/inspections",
         params={
             "batch_id": "BATCH-002",
-            "inspector_id": "priya",
+            "inspector_id": "1",
             "date_from": created["inspected_at"],
             "date_to": created["inspected_at"],
         },
@@ -234,7 +237,7 @@ def test_invalid_pagination_sorting_and_date_range_are_rejected(client, engineer
 
 
 def test_supervisor_can_read_dashboard_and_history(client):
-    headers = {"X-Demo-User": "rahul"}
+    headers = {"X-User-Id": "2"}
     assert client.get("/api/v1/inspections", headers=headers).status_code == 200
     response = client.get("/api/v1/dashboard/summary", headers=headers)
     assert response.status_code == 200

@@ -9,14 +9,14 @@ from app.models.domain import User, UserRole
 
 
 def get_current_user(
-    x_demo_user: Annotated[str | None, Header()] = None,
+    x_user_id: Annotated[str | None, Header(alias="X-User-Id")] = None,
     container: AppContainer = Depends(get_container),
 ) -> User:
-    if not x_demo_user:
-        raise AppError(401, "demo_user_required", "Select a demo user with the X-Demo-User header.")
-    user = container.user_repository.get_user(x_demo_user)
+    if not x_user_id:
+        raise AppError(401, "user_id_required", "Provide a user ID in the X-User-Id header.")
+    user = container.user_repository.get_user(x_user_id)
     if user is None:
-        raise AppError(401, "unknown_demo_user", "The selected demo user does not exist.")
+        raise AppError(401, "unknown_user_id", "The selected user ID does not exist.")
     return user
 
 

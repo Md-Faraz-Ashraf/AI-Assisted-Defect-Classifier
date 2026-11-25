@@ -34,7 +34,7 @@ class UserRow(Base):
         ),
     )
 
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -43,7 +43,7 @@ class UserRow(Base):
 class BatchRow(Base):
     __tablename__ = "batches"
 
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    batch_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     batch_number: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     product_name: Mapped[str] = mapped_column(String(160), nullable=False)
     production_line: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -72,22 +72,28 @@ class InspectionRow(Base):
             _REVIEW_STATE_SQL,
             name="ck_inspections_review_state",
         ),
-        Index("ix_inspections_status_inspected_at_id", "status", "inspected_at", "id"),
+        Index(
+            "ix_inspections_status_inspected_at_inspection_id",
+            "status",
+            "inspected_at",
+            "inspection_id",
+        ),
         Index("ix_inspections_status_analyzed_at", "status", "analyzed_at"),
         Index("ix_inspections_batch", "batch_id"),
         Index("ix_inspections_inspector", "inspector_id"),
         Index("ix_inspections_final_defect", "final_defect_type"),
     )
 
-    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
+    inspection_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="UNREVIEWED", server_default="UNREVIEWED"
     )
     batch_id: Mapped[str] = mapped_column(
-        ForeignKey("batches.id", ondelete="RESTRICT"), nullable=False
+        ForeignKey("batches.batch_id", ondelete="RESTRICT"), nullable=False
     )
     inspector_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+        ForeignKey("users.user_id", name="fk_inspections_inspector_id_users", ondelete="RESTRICT"),
+        nullable=False,
     )
     image_ref: Mapped[str] = mapped_column(String(255), nullable=False)
     original_ai_prediction: Mapped[str] = mapped_column(String(40), nullable=False)

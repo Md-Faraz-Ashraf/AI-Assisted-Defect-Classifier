@@ -15,8 +15,8 @@ from app.models.domain import (
 class MockUserRepository:
     def __init__(self) -> None:
         self._users = {
-            "priya": User("priya", "Priya", UserRole.QUALITY_ENGINEER),
-            "rahul": User("rahul", "Rahul", UserRole.PRODUCTION_SUPERVISOR),
+            "1": User("1", "Priya", UserRole.QUALITY_ENGINEER),
+            "2": User("2", "Rahul", UserRole.PRODUCTION_SUPERVISOR),
         }
 
     def list_users(self) -> list[User]:
@@ -47,7 +47,7 @@ class MockPendingAnalysisRepository:
         self._submission_lock = Lock()
 
     def add(self, analysis: PendingAnalysis) -> None:
-        self._analyses[analysis.id] = analysis
+        self._analyses[analysis.inspection_id] = analysis
 
     def get(self, analysis_id: str) -> PendingAnalysis | None:
         return self._analyses.get(analysis_id)
@@ -69,7 +69,7 @@ class MockInspectionRepository:
         return sum(not row.was_overridden for row in self._inspections.values())
 
     def add(self, inspection: Inspection) -> None:
-        self._inspections[inspection.id] = inspection
+        self._inspections[inspection.inspection_id] = inspection
 
     def get(self, inspection_id: str) -> Inspection | None:
         return self._inspections.get(inspection_id)
@@ -105,7 +105,10 @@ class MockInspectionRepository:
             "final_defect_type": lambda row: row.final_defect_type.value,
             "inspector_id": lambda row: row.inspector_id,
         }[sort_by]
-        records.sort(key=lambda row: (sort_key(row), row.id), reverse=sort_order == "desc")
+        records.sort(
+            key=lambda row: (sort_key(row), row.inspection_id),
+            reverse=sort_order == "desc",
+        )
         total = len(records)
         offset = (page - 1) * page_size
         return records[offset : offset + page_size], total

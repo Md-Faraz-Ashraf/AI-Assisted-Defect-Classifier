@@ -13,22 +13,22 @@ def seed() -> None:
     try:
         with Session(engine) as session, session.begin():
             for row in (
-                UserRow(id="priya", name="Priya", role="QUALITY_ENGINEER"),
-                UserRow(id="rahul", name="Rahul", role="PRODUCTION_SUPERVISOR"),
+                UserRow(user_id="1", name="Priya", role="QUALITY_ENGINEER"),
+                UserRow(user_id="2", name="Rahul", role="PRODUCTION_SUPERVISOR"),
                 BatchRow(
-                    id="BATCH-001",
+                    batch_id="BATCH-001",
                     batch_number="BATCH-001",
                     product_name="Steel Bracket X200",
                     production_line="Line 3",
                 ),
                 BatchRow(
-                    id="BATCH-002",
+                    batch_id="BATCH-002",
                     batch_number="BATCH-002",
                     product_name="Plastic Housing P100",
                     production_line="Line 2",
                 ),
                 BatchRow(
-                    id="BATCH-003",
+                    batch_id="BATCH-003",
                     batch_number="BATCH-003",
                     product_name="Aluminium Panel A50",
                     production_line="Line 1",

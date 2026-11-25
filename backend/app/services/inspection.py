@@ -87,18 +87,18 @@ class InspectionService:
             self.container.image_storage.save, image, extension
         )
         analysis = PendingAnalysis(
-            id=str(uuid4()),
-            batch_id=batch.id,
-            inspector_id=user.id,
+            inspection_id=str(uuid4()),
+            batch_id=batch.batch_id,
+            inspector_id=user.user_id,
             image_ref=image_ref,
             prediction=prediction,
             created_at=datetime.now(UTC),
         )
         self.container.pending_analysis_repository.add(analysis)
         return AIResponse(
-            analysis_id=analysis.id,
+            analysis_id=analysis.inspection_id,
             status=InspectionStatus.UNREVIEWED,
-            batch_id=batch.id,
+            batch_id=batch.batch_id,
             image_url=f"/api/v1/images/{image_ref}",
             prediction=PredictionResponse(
                 defect_type=prediction.defect_type,
@@ -113,7 +113,7 @@ class InspectionService:
         analysis = self.container.pending_analysis_repository.get(payload.analysis_id)
         if analysis is None:
             raise AppError(404, "analysis_not_found", "The AI analysis does not exist.")
-        if analysis.inspector_id != user.id:
+        if analysis.inspector_id != user.user_id:
             raise AppError(403, "analysis_forbidden", "This AI analysis belongs to another user.")
         if analysis.submitted:
             raise AppError(
@@ -127,9 +127,9 @@ class InspectionService:
 
         now = datetime.now(UTC)
         inspection = Inspection(
-            id=analysis.id,
-            batch_id=batch.id,
-            inspector_id=user.id,
+            inspection_id=analysis.inspection_id,
+            batch_id=batch.batch_id,
+            inspector_id=user.user_id,
             image_ref=analysis.image_ref,
             original_ai_prediction=analysis.prediction.defect_type,
             ai_confidence=analysis.prediction.confidence,
@@ -141,7 +141,7 @@ class InspectionService:
             inspected_at=now,
         )
         if not self.container.inspection_submission_repository.submit_pending(
-            analysis.id, inspection
+            analysis.inspection_id, inspection
         ):
             raise AppError(
                 409, "analysis_already_submitted", "This AI analysis was already submitted."
@@ -180,8 +180,10 @@ class InspectionService:
             sort_by=sort_by,
             sort_order=sort_order,
         )
-        users = {person.id: person for person in self.container.user_repository.list_users()}
-        batches = {batch.id: batch for batch in self.container.batch_repository.list_batches()}
+        users = {person.user_id: person for person in self.container.user_repository.list_users()}
+        batches = {
+            batch.batch_id: batch for batch in self.container.batch_repository.list_batches()
+        }
         return InspectionPage(
             items=[
                 self._inspection_response(
@@ -214,7 +216,7 @@ class InspectionService:
         inspection: Inspection, batch: Batch, inspector_name: str
     ) -> InspectionResponse:
         return InspectionResponse(
-            id=inspection.id,
+            inspection_id=inspection.inspection_id,
             status=InspectionStatus.REVIEWED,
             batch_id=inspection.batch_id,
             batch_number=batch.batch_number,

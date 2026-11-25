@@ -34,7 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=[app_settings.frontend_origin],
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Demo-User"],
+        allow_headers=["Content-Type", "X-User-Id"],
     )
 
     @application.exception_handler(AppError)

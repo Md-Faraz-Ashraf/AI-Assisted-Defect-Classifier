@@ -23,14 +23,14 @@ class InspectionStatus(StrEnum):
 
 @dataclass(frozen=True)
 class User:
-    id: str
+    user_id: str
     name: str
     role: UserRole
 
 
 @dataclass(frozen=True)
 class Batch:
-    id: str
+    batch_id: str
     batch_number: str
     product_name: str
     production_line: str
@@ -46,7 +46,7 @@ class Prediction:
 
 @dataclass
 class PendingAnalysis:
-    id: str
+    inspection_id: str
     batch_id: str
     inspector_id: str
     image_ref: str
@@ -61,7 +61,7 @@ class PendingAnalysis:
 
 @dataclass(frozen=True)
 class Inspection:
-    id: str
+    inspection_id: str
     batch_id: str
     inspector_id: str
     image_ref: str

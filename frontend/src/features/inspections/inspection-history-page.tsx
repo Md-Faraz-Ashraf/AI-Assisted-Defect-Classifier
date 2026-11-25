@@ -118,7 +118,7 @@ export function InspectionHistoryPage() {
             <SelectContent>
               <SelectItem value="all">All batches</SelectItem>
               {batchesQuery.data.map((batch) => (
-                <SelectItem key={batch.id} value={batch.id}>
+                <SelectItem key={batch.batch_id} value={batch.batch_id}>
                   {batch.batch_number} · {batch.product_name}
                 </SelectItem>
               ))}

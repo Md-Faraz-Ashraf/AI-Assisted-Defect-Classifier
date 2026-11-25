@@ -11,13 +11,13 @@ export type UserRole = "QUALITY_ENGINEER" | "PRODUCTION_SUPERVISOR";
 export type InspectionStatus = "UNREVIEWED" | "REVIEWED";
 
 export interface DemoUser {
-  id: string;
+  user_id: string;
   name: string;
   role: UserRole;
 }
 
 export interface Batch {
-  id: string;
+  batch_id: string;
   batch_number: string;
   product_name: string;
   production_line: string;
@@ -40,7 +40,7 @@ export interface AIAnalysis {
 }
 
 export interface Inspection {
-  id: string;
+  inspection_id: string;
   status: InspectionStatus;
   batch_id: string;
   batch_number: string;
