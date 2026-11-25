@@ -35,11 +35,11 @@ from app.services.image_storage import ImageStorage, LocalImageStorage
 @dataclass
 class AppContainer:
     settings: Settings
-    users: UserRepository
-    batches: BatchRepository
-    inspections: InspectionRepository
-    submissions: InspectionSubmissionRepository
-    analyses: PendingAnalysisRepository
+    user_repository: UserRepository
+    batch_repository: BatchRepository
+    inspection_repository: InspectionRepository
+    inspection_submission_repository: InspectionSubmissionRepository
+    pending_analysis_repository: PendingAnalysisRepository
     ai_provider: AIProvider
     image_storage: ImageStorage
     database_engine: Engine | None = None
@@ -93,11 +93,11 @@ def build_container(settings: Settings) -> AppContainer:
         sessions: sessionmaker[Session] = make_session_factory(engine)
         return AppContainer(
             settings=settings,
-            users=PostgresUserRepository(sessions),
-            batches=PostgresBatchRepository(sessions),
-            inspections=PostgresInspectionRepository(sessions),
-            submissions=PostgresInspectionSubmissionRepository(sessions),
-            analyses=PostgresInspectionLifecycleRepository(sessions),
+            user_repository=PostgresUserRepository(sessions),
+            batch_repository=PostgresBatchRepository(sessions),
+            inspection_repository=PostgresInspectionRepository(sessions),
+            inspection_submission_repository=PostgresInspectionSubmissionRepository(sessions),
+            pending_analysis_repository=PostgresInspectionLifecycleRepository(sessions),
             ai_provider=provider,
             image_storage=LocalImageStorage(Path(settings.image_storage_path)),
             database_engine=engine,
@@ -111,11 +111,11 @@ def build_container(settings: Settings) -> AppContainer:
     analyses = MockPendingAnalysisRepository()
     return AppContainer(
         settings=settings,
-        users=users,
-        batches=batches,
-        inspections=inspections,
-        submissions=MockInspectionSubmissionRepository(analyses, inspections),
-        analyses=analyses,
+        user_repository=users,
+        batch_repository=batches,
+        inspection_repository=inspections,
+        inspection_submission_repository=MockInspectionSubmissionRepository(analyses, inspections),
+        pending_analysis_repository=analyses,
         ai_provider=provider,
         image_storage=LocalImageStorage(Path(settings.image_storage_path)),
     )

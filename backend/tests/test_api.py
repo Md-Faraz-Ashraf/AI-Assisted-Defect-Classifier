@@ -164,7 +164,7 @@ def test_analysis_must_belong_to_same_user_and_cannot_be_submitted_twice(
 def test_analysis_cannot_be_submitted_by_another_quality_engineer(
     client, engineer_headers, png_bytes
 ):
-    client.app.state.container.users._users["anita"] = User(
+    client.app.state.container.user_repository._users["anita"] = User(
         "anita", "Anita", UserRole.QUALITY_ENGINEER
     )
     analysis = request_prediction(client, engineer_headers, png_bytes).json()

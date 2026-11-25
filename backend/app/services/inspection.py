@@ -37,7 +37,7 @@ class InspectionService:
     async def predict(
         self, *, image: bytes, media_type: str | None, batch_id: str, user: User
     ) -> AIResponse:
-        batch = self.container.batches.get_batch(batch_id)
+        batch = self.container.batch_repository.get_batch(batch_id)
         if batch is None:
             raise AppError(404, "batch_not_found", "The selected batch does not exist.")
         normalized_type, extension = await anyio.to_thread.run_sync(
@@ -94,7 +94,7 @@ class InspectionService:
             prediction=prediction,
             created_at=datetime.now(UTC),
         )
-        self.container.analyses.add(analysis)
+        self.container.pending_analysis_repository.add(analysis)
         return AIResponse(
             analysis_id=analysis.id,
             status=InspectionStatus.UNREVIEWED,
@@ -110,7 +110,7 @@ class InspectionService:
         )
 
     def submit(self, payload: InspectionCreate, user: User) -> InspectionResponse:
-        analysis = self.container.analyses.get(payload.analysis_id)
+        analysis = self.container.pending_analysis_repository.get(payload.analysis_id)
         if analysis is None:
             raise AppError(404, "analysis_not_found", "The AI analysis does not exist.")
         if analysis.inspector_id != user.id:
@@ -119,7 +119,7 @@ class InspectionService:
             raise AppError(
                 409, "analysis_already_submitted", "This AI analysis was already submitted."
             )
-        batch = self.container.batches.get_batch(analysis.batch_id)
+        batch = self.container.batch_repository.get_batch(analysis.batch_id)
         if batch is None:
             raise AppError(422, "invalid_analysis", "The analysis references an unavailable batch.")
         if not self.container.image_storage.contains(analysis.image_ref):
@@ -140,7 +140,9 @@ class InspectionService:
             comments=payload.comments,
             inspected_at=now,
         )
-        if not self.container.submissions.submit_pending(analysis.id, inspection):
+        if not self.container.inspection_submission_repository.submit_pending(
+            analysis.id, inspection
+        ):
             raise AppError(
                 409, "analysis_already_submitted", "This AI analysis was already submitted."
             )
@@ -167,7 +169,7 @@ class InspectionService:
             raise AppError(
                 422, "invalid_date_range", "date_from must be earlier than or equal to date_to."
             )
-        rows, total = self.container.inspections.list_page(
+        rows, total = self.container.inspection_repository.list_page(
             defect_type=defect_type,
             batch_id=batch_id,
             inspector_id=inspector_id,
@@ -178,8 +180,8 @@ class InspectionService:
             sort_by=sort_by,
             sort_order=sort_order,
         )
-        users = {person.id: person for person in self.container.users.list_users()}
-        batches = {batch.id: batch for batch in self.container.batches.list_batches()}
+        users = {person.id: person for person in self.container.user_repository.list_users()}
+        batches = {batch.id: batch for batch in self.container.batch_repository.list_batches()}
         return InspectionPage(
             items=[
                 self._inspection_response(
@@ -196,11 +198,11 @@ class InspectionService:
         )
 
     def get_inspection(self, inspection_id: str) -> InspectionResponse:
-        inspection = self.container.inspections.get(inspection_id)
+        inspection = self.container.inspection_repository.get(inspection_id)
         if inspection is None:
             raise AppError(404, "inspection_not_found", "The inspection does not exist.")
-        batch = self.container.batches.get_batch(inspection.batch_id)
-        inspector = self.container.users.get_user(inspection.inspector_id)
+        batch = self.container.batch_repository.get_batch(inspection.batch_id)
+        inspector = self.container.user_repository.get_user(inspection.inspector_id)
         if batch is None or inspector is None:
             raise AppError(
                 500, "invalid_inspection", "The inspection references missing related data."

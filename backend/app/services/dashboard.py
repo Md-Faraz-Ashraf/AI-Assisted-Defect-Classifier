@@ -8,11 +8,11 @@ class DashboardService:
         self.container = container
 
     def summary(self) -> DashboardSummary:
-        counts = self.container.inspections.dashboard_counts()
+        counts = self.container.inspection_repository.dashboard_counts()
         total = sum(counts.values())
         passed = counts[DefectType.NO_DEFECT]
         rejected = total - passed
-        accepted = self.container.inspections.dashboard_accepted_count()
+        accepted = self.container.inspection_repository.dashboard_accepted_count()
         return DashboardSummary(
             total_inspections=total,
             passed_inspections=passed,

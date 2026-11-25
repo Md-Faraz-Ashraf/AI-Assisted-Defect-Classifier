@@ -9,4 +9,4 @@ router = APIRouter(tags=["users"])
 
 @router.get("/users", response_model=list[UserResponse])
 def list_users(container: AppContainer = Depends(get_container)) -> list[UserResponse]:
-    return [UserResponse.model_validate(user) for user in container.users.list_users()]
+    return [UserResponse.model_validate(user) for user in container.user_repository.list_users()]

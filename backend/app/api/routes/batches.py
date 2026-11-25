@@ -13,4 +13,6 @@ router = APIRouter(tags=["batches"])
 def list_batches(
     _: User = Depends(get_current_user), container: AppContainer = Depends(get_container)
 ) -> list[BatchResponse]:
-    return [BatchResponse.model_validate(batch) for batch in container.batches.list_batches()]
+    return [
+        BatchResponse.model_validate(batch) for batch in container.batch_repository.list_batches()
+    ]

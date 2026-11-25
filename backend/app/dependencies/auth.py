@@ -14,7 +14,7 @@ def get_current_user(
 ) -> User:
     if not x_demo_user:
         raise AppError(401, "demo_user_required", "Select a demo user with the X-Demo-User header.")
-    user = container.users.get_user(x_demo_user)
+    user = container.user_repository.get_user(x_demo_user)
     if user is None:
         raise AppError(401, "unknown_demo_user", "The selected demo user does not exist.")
     return user
