@@ -2,13 +2,13 @@
 
 ## Overall progress
 
-- Current phase: Phase 5 — Pluggable PostgreSQL Integration
+- Current phase: Phase 6 — Gemini Vision Provider Integration
 - Phase 1 status: `APPROVED`
 - Phase 2 status: `APPROVED`
 - Phase 3 status: `APPROVED`
 - Phase 4 status: `APPROVED`
 - Phase 5 status: `APPROVED`
-- Proposed Phase 6 status: `NOT_STARTED` (not present in the supplied five-phase master prompt; requires owner approval as a plan amendment)
+- Phase 6 status: `READY_FOR_REVIEW` (owner selected Gemini `gemini-3.5-flash-lite`)
 - Later phases remain `NOT_STARTED` and will not begin until the preceding phase is explicitly approved.
 
 Statuses: `NOT_STARTED`, `IN_PROGRESS`, `READY_FOR_REVIEW`, `APPROVED`, `BLOCKED`, `REJECTED`, `COMPLETED`.
@@ -80,11 +80,19 @@ Database lifecycle decision: use exactly three application tables (`users`, `bat
 
 Phase status: `APPROVED`
 
-## Proposed Phase 6 — Real Vision Provider Integration
+## Phase 6 — Gemini Vision Provider Integration
 
-The supplied master prompt ends at Phase 5 and does not schedule a live vendor adapter. Phase 2 delivered only the provider contract and deterministic mock. This proposed phase would add a selected vendor SDK/client, backend-only credential configuration, structured response parsing, timeout/rate-limit/error handling, and provider-specific tests, while retaining mock mode. It requires owner approval as a plan amendment and selection of a provider/model plus a locally configured API key. No live-model calls should be made before that approval and configuration.
+The owner approved Phase 6 and selected Gemini `gemini-3.5-flash-lite`. The Google Gen AI SDK adapter uses backend-only key configuration, structured classification output, timeout/rate-limit/error handling, provider tests, and setup documentation while retaining mock mode. A live request using a generated image succeeded; user verification of the end-to-end UI flow remains.
 
-Phase status: `NOT_STARTED` (proposed; plan amendment not yet approved)
+| Task ID | Description | Status | Dependencies | Verification method / actual result | User input required? |
+|---|---|---|---|---|---|
+| P6-01 | Add Gemini SDK adapter with model and key configuration | COMPLETED | Phase 5 approved; model selected | Google Gen AI SDK adapter added; key and model come from backend settings. | No |
+| P6-02 | Preserve strict taxonomy validation and map timeout/auth/rate-limit/provider errors safely | COMPLETED | P6-01 | Structured JSON schema, backend Pydantic validation, request timeout, and safe error mapping implemented. | No |
+| P6-03 | Add unit/API tests for request construction, provider behavior, and mock regression | COMPLETED | P6-01, P6-02 | Backend suite: 38 passed; Ruff, format, Mypy, and compileall passed. Gemini unit tests mock network calls. | No |
+| P6-04 | Update README, API, architecture, and setup docs | COMPLETED | P6-01 | Setup and backend/provider documentation updated. | No |
+| P6-05 | Verify live prediction through configured Gemini key and user review | READY_FOR_REVIEW | P6-01–P6-04 | One generated test image returned valid JSON: Scratch, confidence 0.98. Manual UI workflow remains for user review. | Yes |
+
+Phase status: `READY_FOR_REVIEW`
 
 ## Technical decisions and assumptions
 
@@ -94,7 +102,7 @@ Phase status: `NOT_STARTED` (proposed; plan amendment not yet approved)
 - The current runtime provides Node 24 and Python 3.14.7. Backend support targets Python 3.11+ and will be verified on the available Python 3.14 runtime.
 - Keep each phase approval-gated; the user explicitly approved moving from Phase 1 to Phase 2.
 - Phase 2 uses in-memory mock repositories and local generated-name image files. Inspection/analysis records reset on backend restart; image files remain.
-- The configured `vision` provider is an explicit integration boundary and responds with a safe unavailable error until a vendor adapter/model is selected and credentials are supplied.
+- Gemini integration is a later phase added by owner approval after the supplied five-phase prompt; the selected model is `gemini-3.5-flash-lite`.
 
 ## Dependencies and verification evidence
 
@@ -110,16 +118,18 @@ Phase 2 verification evidence:
 - `python -m compileall -q app`: passed.
 - Started Uvicorn on port 8001 because port 8000 was already occupied. Live requests returned health `ok`, 2 demo users, 3 batches, empty dashboard total `0`, and Swagger UI HTTP 200.
 - OpenAPI is generated from the running FastAPI app; automated test checks the Phase 2 endpoints are present.
-- The local mock API needs neither PostgreSQL nor an AI key. Live vision analysis remains unverified and needs user selection of a provider/model and local credential configuration.
+- The local mock API needs neither PostgreSQL nor an AI key. Gemini live calls require `AI_PROVIDER=gemini` and a locally configured `AI_API_KEY`. A generated-image live request to `gemini-3.5-flash-lite` succeeded on 2026-11-25 with structured output (`Scratch`, confidence `0.98`); this is a smoke check, not accuracy validation.
 
 Phase 2 was explicitly approved by the user on 2026-11-24. Phase 3 was approved by the user; Phase 4 verification is in progress.
 
 ## Open questions
 
-- A real vision adapter is not assigned to any of the supplied five phases. Phase 2 implements only the provider boundary and mock. A proposed Phase 6 is recorded above, pending owner approval and provider/model selection.
-- PostgreSQL connection details are only needed for Phase 5.
+- Manual end-to-end verification of Gemini through the UI remains with the owner. The generated-image smoke result does not establish classification accuracy.
+- PostgreSQL connection details were used and verified during Phase 5.
 
 ## User approval history
+
+- 2026-11-25: User directed Phase 6 implementation and selected Gemini `gemini-3.5-flash-lite`; user reports local `.env` and `.env.example` are configured.
 
 - 2026-11-24: User explicitly approved Phase 1 and instructed start of Phase 2 (`"project is pushed to git. please start phase 2"`).
 - 2026-11-24: User explicitly approved Phase 2 and instructed start of Phase 3.

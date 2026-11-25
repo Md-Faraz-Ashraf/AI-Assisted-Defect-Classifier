@@ -342,6 +342,8 @@ def test_invalid_images_mime_and_size_are_rejected(client, engineer_headers, png
     assert mismatch.status_code == 415
     too_large_app = create_app(
         Settings(
+            _env_file=None,
+            ai_provider="mock",
             image_storage_path=str(client.app.state.container.settings.image_storage_path),
             max_image_size_bytes=8,
         )
@@ -378,21 +380,35 @@ def test_database_mode_fails_instead_of_falling_back(monkeypatch):
     )
     with pytest.raises(RuntimeError, match="requires a reachable PostgreSQL database"):
         container_module.build_container(
-            Settings(app_mode="database", image_storage_path=f"var/test-images-{uuid4()}")
+            Settings(
+                _env_file=None,
+                ai_provider="mock",
+                app_mode="database",
+                image_storage_path=f"var/test-images-{uuid4()}",
+            )
         )
 
 
-def test_vision_provider_boundary_fails_clearly_without_falling_back(png_bytes):
-    from fastapi.testclient import TestClient
+def test_gemini_provider_requires_api_key():
+    with pytest.raises(RuntimeError, match="requires AI_API_KEY"):
+        from app.dependencies.container import build_container
 
-    app = create_app(
-        Settings(ai_provider="vision", image_storage_path=f"var/test-images-{uuid4()}")
+        build_container(Settings(_env_file=None, ai_provider="gemini", ai_api_key=None))
+
+
+def test_gemini_provider_uses_configured_model():
+    from app.dependencies.container import build_container
+
+    container = build_container(
+        Settings(
+            _env_file=None,
+            ai_provider="gemini",
+            ai_api_key="test-key",
+            llm_model="gemini-3.5-flash-lite",
+        )
     )
-    with TestClient(app) as vision_client:
-        response = request_prediction(vision_client, {"X-Demo-User": "priya"}, png_bytes)
-    assert response.status_code == 503
-    assert response.json()["error"]["code"] == "ai_unavailable"
-    assert "private" not in response.text
+    assert container.ai_provider.name == "gemini"
+    assert container.ai_provider.model == "gemini-3.5-flash-lite"
 
 
 def test_openapi_contains_phase_two_routes(client):
@@ -408,12 +424,10 @@ def test_openapi_contains_phase_two_routes(client):
         assert path in schema["paths"]
 
 
-def test_real_ai_boundary_has_taxonomy_and_structured_request_contract():
+def test_gemini_provider_has_taxonomy_and_batch_context():
     from app.repositories.mock import MockBatchRepository
-    from app.services.ai.provider import VisionProviderBoundary
+    from app.services.ai.provider import GeminiAIProvider
 
-    spec = VisionProviderBoundary()
-    context = spec.request_context(MockBatchRepository().get_batch("BATCH-001"))
+    context = GeminiAIProvider.request_context(MockBatchRepository().get_batch("BATCH-001"))
     assert context["allowed_defect_types"] == [kind.value for kind in DefectType]
-    assert spec.response_schema["additionalProperties"] is False
-    assert "Return JSON only" in spec.classification_instructions
+    assert "Return JSON only" in GeminiAIProvider.classification_instructions

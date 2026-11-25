@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:5173"
     ai_provider: str = "mock"
     ai_api_key: str | None = None
-    database_url: str = (
-        "postgresql+psycopg://quality_app:replace-with-local-password@localhost:5432/quality_inspection"
-    )
+    llm_model: str = "gemini-3.5-flash-lite"
+    ai_timeout_seconds: float = Field(default=30, gt=0, le=120)
+    database_url: str = "postgresql+psycopg://quality_app:replace-with-local-password@localhost:5432/quality_inspection"
     image_storage_path: str = "./var/images"
     max_image_size_bytes: int = Field(default=5 * 1024 * 1024, gt=0, le=25 * 1024 * 1024)
 

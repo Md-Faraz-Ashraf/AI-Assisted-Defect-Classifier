@@ -76,6 +76,21 @@ npm run dev
 
 Open the URL printed by Vite (normally <http://localhost:5173>). The frontend's default API URL is `http://127.0.0.1:8000/api/v1`. The API health check is <http://127.0.0.1:8000/api/v1/health>; interactive API docs are at <http://127.0.0.1:8000/docs>.
 
+## Use Gemini for image analysis
+
+The backend can send uploaded images to Google's Gemini API. The configured model is `gemini-3.5-flash-lite`; the API key stays on the backend. Configure these values in the repository root `.env`:
+
+```dotenv
+AI_PROVIDER=gemini
+AI_API_KEY=your-gemini-api-key
+LLM_MODEL=gemini-3.5-flash-lite
+AI_TIMEOUT_SECONDS=30
+```
+
+Restart the backend after changing `.env`. Keep `AI_PROVIDER=mock` to use deterministic mock predictions without an API key. Gemini is independent of `APP_MODE`, so it can be used with either in-memory or PostgreSQL persistence. The backend rejects unsupported categories, malformed output, and out-of-range confidence; provider failures do not silently become `No Defect`.
+
+When Gemini is enabled, uploaded inspection images and associated batch/product context are sent to Google's Gemini API for analysis. Use images you are permitted to share with that service.
+
 ## Run with PostgreSQL (persistent application data)
 
 In database mode, the backend requires a reachable PostgreSQL server and will fail to start if it cannot connect. The PostgreSQL database service must be running before migration, seeding, or starting the API. The default local connection uses host `localhost`, port `5432`, database `quality_inspection`, and role `quality_app`.
@@ -162,7 +177,10 @@ Set `APP_MODE=mock` or `APP_MODE=database` in the repository root `.env`, then r
 | --- | --- | --- |
 | `APP_MODE` | `mock` | Backend persistence: `mock` or `database`. |
 | `DATABASE_URL` | Local example URL | PostgreSQL connection used by migrations, seed, and database mode. |
-| `AI_PROVIDER` | `mock` | AI adapter. The repository currently uses mock predictions. |
+| `AI_PROVIDER` | `mock` | AI adapter: `mock` or `gemini`. |
+| `AI_API_KEY` | unset | Gemini API key; required when `AI_PROVIDER=gemini`. |
+| `LLM_MODEL` | `gemini-3.5-flash-lite` | Gemini model identifier. |
+| `AI_TIMEOUT_SECONDS` | `30` | Maximum time allowed for a Gemini analysis request. |
 | `API_HOST` / `API_PORT` | `127.0.0.1` / `8000` | Backend bind address and port. |
 | `FRONTEND_ORIGIN` | `http://localhost:5173` | Allowed browser origin for API requests. |
 | `IMAGE_STORAGE_PATH` | `./var/images` | Local image storage path, relative to backend working directory. |

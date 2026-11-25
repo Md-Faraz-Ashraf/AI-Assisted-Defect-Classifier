@@ -28,7 +28,7 @@ from app.repositories.protocols import (
     PendingAnalysisRepository,
     UserRepository,
 )
-from app.services.ai.provider import AIProvider, MockAIProvider, VisionProviderBoundary
+from app.services.ai.provider import AIProvider, GeminiAIProvider, MockAIProvider
 from app.services.image_storage import ImageStorage, LocalImageStorage
 
 
@@ -57,10 +57,16 @@ class AppContainer:
 def build_container(settings: Settings) -> AppContainer:
     if settings.ai_provider == "mock":
         provider: AIProvider = MockAIProvider()
-    elif settings.ai_provider == "vision":
-        provider = VisionProviderBoundary()
+    elif settings.ai_provider == "gemini":
+        if not settings.ai_api_key:
+            raise RuntimeError("AI_PROVIDER=gemini requires AI_API_KEY in the environment.")
+        provider = GeminiAIProvider(
+            api_key=settings.ai_api_key,
+            model=settings.llm_model,
+            timeout_seconds=settings.ai_timeout_seconds,
+        )
     else:
-        raise RuntimeError("AI_PROVIDER must be either 'mock' or 'vision'.")
+        raise RuntimeError("AI_PROVIDER must be either 'mock' or 'gemini'.")
 
     if settings.app_mode == "database":
         is_postgres = settings.database_url.startswith("postgresql+psycopg://")

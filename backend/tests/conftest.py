@@ -15,7 +15,9 @@ from app.main import create_app
 def client() -> Iterator[TestClient]:
     image_path = Path("var") / f"test-images-{uuid4()}"
     image_path.mkdir(parents=True, exist_ok=True)
-    app = create_app(Settings(image_storage_path=str(image_path)))
+    app = create_app(
+        Settings(_env_file=None, ai_provider="mock", image_storage_path=str(image_path))
+    )
     try:
         with TestClient(app) as test_client:
             yield test_client

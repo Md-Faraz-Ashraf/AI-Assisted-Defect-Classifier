@@ -127,4 +127,4 @@ curl.exe -H "X-Demo-User: rahul" "http://127.0.0.1:8000/api/v1/inspections?page=
 
 ## Current implementation limits
 
-Mock repositories are in-memory and reset on backend restart. A selectable vision provider boundary describes the taxonomy/context/structured response contract, but no vendor SDK, model request, or live AI key is wired yet. PostgreSQL repositories are deferred to Phase 5.
+Mock repositories are in-memory and reset on backend restart. `AI_PROVIDER=mock` uses deterministic predictions; `AI_PROVIDER=gemini` sends validated image bytes and batch context to the configured Gemini model. The Gemini response is constrained to the supported defect taxonomy and validated by the backend before an analysis is created. Gemini credentials are backend-only. PostgreSQL repository selection remains independent via `APP_MODE`.

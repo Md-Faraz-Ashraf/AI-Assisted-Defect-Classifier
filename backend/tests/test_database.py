@@ -154,6 +154,8 @@ def test_database_mode_does_not_fall_back_when_connection_fails(monkeypatch):
     with pytest.raises(RuntimeError, match="requires a reachable PostgreSQL database"):
         container_module.build_container(
             Settings(
+                _env_file=None,
+                ai_provider="mock",
                 app_mode="database",
                 database_url="postgresql+psycopg://bad",
                 image_storage_path="var/test-images",

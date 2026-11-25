@@ -11,7 +11,7 @@ The monorepo contains independently runnable React/Vite and FastAPI apps. Backen
 - `app/services/`: image-analysis lifecycle, inspection submission, history transformation, dashboard calculations.
 - `app/repositories/protocols.py`: user, batch, pending-analysis lifecycle, and reviewed-inspection query contracts.
 - `app/repositories/mock.py`: seeded demo identities/batches and in-memory analysis/inspection records.
-- `app/services/ai/provider.py`: AI provider protocol, deterministic mock, and replaceable vision-provider boundary.
+- `app/services/ai/provider.py`: AI provider protocol, deterministic mock, and Gemini adapter.
 - `app/services/image_storage.py`: image verification and safe local file storage behind a small storage component.
 - `app/dependencies/`: application container and trusted demo-user role lookup.
 
@@ -29,7 +29,7 @@ Demo identity is selected with `X-Demo-User` (`priya` or `rahul`). The role is a
 
 JPEG, PNG, and WebP content is decoded and verified with Pillow; MIME type must agree with actual content; uploads have a configurable 5 MiB default limit and 40 MP pixel limit. Uploaded filenames are ignored. Local storage accepts only generated UUID references and the browser receives an API reference, not a filesystem path.
 
-The deterministic mock provider uses image bytes to return one of the exact five categories with a fixed indicative score. The vision adapter boundary carries batch/product context, exact allowed taxonomy, instructions, and a strict structured response contract. No real model SDK or provider key is currently configured. Provider failures and malformed responses remain errors; they are never translated to `No Defect`.
+The deterministic mock provider uses image bytes to return one of the exact five categories with a fixed indicative score. The Gemini adapter sends the validated image and batch/product context, requests structured JSON matching the backend prediction contract, and records the selected model/provider with the analysis. `AI_API_KEY` is backend-only; missing credentials prevent Gemini mode from starting. Provider failures and malformed responses remain errors; they are never translated to `No Defect`.
 
 ## Dashboard and repository strategy
 
@@ -39,4 +39,4 @@ Dashboard service formulas use only final classifications and repository aggrega
 
 - `APP_MODE=mock` and `AI_PROVIDER=mock` are the verified no-setup choices.
 - Mock inspections and unreviewed analyses are lost on backend restart; image files remain under the configured local storage directory.
-- No production authentication, live AI vendor adapter, deployment, or container infrastructure is included. The five-phase master prompt does not schedule a live vision adapter; a proposed Phase 6 is documented pending approval/provider selection.
+- No production authentication, deployment, or container infrastructure is included. Live-model output quality depends on image quality and is not calibrated as a statistical probability; every decision remains subject to engineer review.
