@@ -77,22 +77,20 @@ export function AppShell() {
                 {label}
               </NavLink>
             ))}
-            {currentUser?.role === "QUALITY_ENGINEER" && (
-              <NavLink
-                to="/new-inspection"
-                className={({ isActive }) =>
-                  cn(
-                    "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground",
-                  )
-                }
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                New inspection
-              </NavLink>
-            )}
+            <NavLink
+              to="/new-inspection"
+              className={({ isActive }) =>
+                cn(
+                  "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isActive
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground",
+                )
+              }
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              New inspection
+            </NavLink>
           </nav>
         </div>
         <div className="mt-auto p-4">
@@ -180,21 +178,19 @@ export function AppShell() {
                 {label}
               </NavLink>
             ))}
-            {currentUser?.role === "QUALITY_ENGINEER" && (
-              <NavLink
-                to="/new-inspection"
-                className={({ isActive }) =>
-                  cn(
-                    "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground",
-                  )
-                }
-              >
-                <Plus className="size-4" aria-hidden="true" /> New inspection
-              </NavLink>
-            )}
+            <NavLink
+              to="/new-inspection"
+              className={({ isActive }) =>
+                cn(
+                  "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isActive
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground",
+                )
+              }
+            >
+              <Plus className="size-4" aria-hidden="true" /> New inspection
+            </NavLink>
           </div>
         </header>
 

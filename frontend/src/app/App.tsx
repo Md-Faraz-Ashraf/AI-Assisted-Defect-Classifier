@@ -1,10 +1,8 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/app-shell";
-import { EmptyState, PageLoading, QueryError } from "@/components/query-states";
+import { EmptyState, PageLoading } from "@/components/query-states";
 import { Button } from "@/components/ui/button";
-import { useDemoUser } from "@/app/demo-user-context";
-import { useUsers } from "@/services/queries";
 
 const DashboardPage = lazy(() =>
   import("@/features/dashboard/dashboard-page").then((module) => ({
@@ -27,29 +25,6 @@ function SuspendedPage({ children }: { children: ReactNode }) {
     <Suspense fallback={<PageLoading label="Loading page" />}>
       {children}
     </Suspense>
-  );
-}
-
-function QualityEngineerRoute() {
-  const { demoUserId } = useDemoUser();
-  const usersQuery = useUsers();
-
-  if (usersQuery.isPending)
-    return <PageLoading label="Checking demo-user permissions" />;
-  if (usersQuery.isError) {
-    return (
-      <QueryError
-        message={usersQuery.error.message}
-        onRetry={() => void usersQuery.refetch()}
-      />
-    );
-  }
-  const user = usersQuery.data.find((item) => item.id === demoUserId);
-  if (user?.role !== "QUALITY_ENGINEER") return <Navigate to="/" replace />;
-  return (
-    <SuspendedPage>
-      <NewInspectionPage />
-    </SuspendedPage>
   );
 }
 
@@ -87,7 +62,14 @@ export default function App() {
             </SuspendedPage>
           }
         />
-        <Route path="new-inspection" element={<QualityEngineerRoute />} />
+        <Route
+          path="new-inspection"
+          element={
+            <SuspendedPage>
+              <NewInspectionPage />
+            </SuspendedPage>
+          }
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
