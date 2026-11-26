@@ -1,3 +1,4 @@
+// Tests HTTP request construction and error handling for the API client in api.ts.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api, ApiError } from "./api";
 

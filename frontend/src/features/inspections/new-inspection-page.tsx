@@ -2,15 +2,8 @@ import { useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  Check,
-  ImagePlus,
-  RotateCcw,
-  Sparkles,
-  Upload,
-} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, Check, ImagePlus, Sparkles, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useLoggedInUser } from "@/app/logged-in-user-context";
@@ -33,8 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useBatches } from "@/services/queries";
-import { api, ApiError } from "@/services/api";
+import {
+  useAiAnalysis,
+  useBatches,
+  useFinalizeInspection,
+} from "@/services/queries";
+import { ApiError } from "@/services/api";
 import { queryKeys } from "@/services/query-keys";
 import {
   DEFECT_TYPES,
@@ -48,17 +45,24 @@ import { ProtectedImage } from "@/components/protected-image";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
+const imageSourceSchema = z.union([
+  z.object({
+    type: z.literal("upload"),
+    file: z
+      .file()
+      .max(MAX_IMAGE_SIZE, "Choose an image smaller than 5 MiB.")
+      .mime([...IMAGE_MIME_TYPES], "Choose a JPEG, PNG, or WebP image."),
+  }),
+  z.object({ type: z.literal("stored"), image_ref: z.string().min(1) }),
+]);
+
 const analysisSchema = z
   .object({
     batch_id: z.string().min(1, "Select a manufacturing batch."),
-    image: z
-      .file()
-      .max(MAX_IMAGE_SIZE, "Choose an image smaller than 5 MiB.")
-      .mime([...IMAGE_MIME_TYPES], "Choose a JPEG, PNG, or WebP image.")
-      .optional(),
+    image: imageSourceSchema.optional(),
   })
   .superRefine((values, context) => {
-    if (!values.image) {
+    if (!values.image || values.image.type !== "upload") {
       context.addIssue({
         code: "custom",
         path: ["image"],
@@ -95,35 +99,33 @@ export function NewInspectionPage() {
   const reviewInspection = (
     location.state as { reviewInspection?: Inspection } | null
   )?.reviewInspection;
-  const initialAnalysis: AIAnalysis | null =
-    reviewInspection?.status === "UNREVIEWED"
-      ? {
-          inspection_id: reviewInspection.inspection_id,
-          status: reviewInspection.status,
-          batch_id: reviewInspection.batch_id,
-          image_url: reviewInspection.image_url,
-          prediction: {
-            defect_type: reviewInspection.original_ai_prediction,
-            confidence: reviewInspection.ai_confidence,
-            provider: reviewInspection.ai_provider,
-            model: reviewInspection.ai_model,
-          },
-          created_at: "",
-        }
-      : null;
+  const isRedirectionFlow = reviewInspection?.status === "UNREVIEWED";
+  const unreviewedAnalysis: AIAnalysis | null = isRedirectionFlow
+    ? {
+        inspection_id: reviewInspection.inspection_id,
+        status: reviewInspection.status,
+        batch_id: reviewInspection.batch_id,
+        image_url: reviewInspection.image_url,
+        prediction: {
+          defect_type: reviewInspection.original_ai_prediction,
+          confidence: reviewInspection.ai_confidence,
+          provider: reviewInspection.ai_provider,
+          model: reviewInspection.ai_model,
+        },
+        created_at: "",
+      }
+    : null;
   const queryClient = useQueryClient();
   const batchesQuery = useBatches(loggedInUserId);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [analysis, setAnalysis] = useState<AIAnalysis | null>(initialAnalysis);
   const [formError, setFormError] = useState<string>();
   const analysisForm = useForm<AnalysisValues>({
     resolver: zodResolver(analysisSchema),
     defaultValues: {
-      batch_id:
-        reviewInspection?.status === "UNREVIEWED"
-          ? reviewInspection.batch_id
-          : "",
-      image: undefined,
+      batch_id: isRedirectionFlow ? reviewInspection.batch_id : "",
+      image: isRedirectionFlow
+        ? { type: "stored", image_ref: reviewInspection.image_ref }
+        : undefined,
     },
   });
   const decisionForm = useForm<DecisionValues>({
@@ -138,19 +140,20 @@ export function NewInspectionPage() {
     control: analysisForm.control,
     name: "image",
   });
+  const selectedImageFile =
+    selectedImage?.type === "upload" ? selectedImage.file : undefined;
+  const storedImageRef =
+    selectedImage?.type === "stored" ? selectedImage.image_ref : undefined;
   const finalDefectType = useWatch({
     control: decisionForm.control,
     name: "final_defect_type",
   });
   const commentLength =
     useWatch({ control: decisionForm.control, name: "comments" })?.length ?? 0;
-  const previewUrl = useObjectUrl(selectedImage);
+  const previewUrl = useObjectUrl(selectedImageFile);
 
-  const analyzeMutation = useMutation({
-    mutationFn: ({ batchId, image }: { batchId: string; image: File }) =>
-      api.predict(loggedInUserId, batchId, image),
-    onSuccess: (prediction) => {
-      setAnalysis(prediction);
+  const analyzeMutation = useAiAnalysis(loggedInUserId, {
+    onSuccess: () => {
       setFormError(undefined);
       decisionForm.reset({ final_defect_type: undefined, comments: "" });
     },
@@ -163,19 +166,11 @@ export function NewInspectionPage() {
       toast.error("AI analysis failed", { description: message });
     },
   });
+  const analysis = analyzeMutation.data ?? unreviewedAnalysis;
 
-  const submitMutation = useMutation({
-    mutationFn: (values: DecisionValues) => {
-      if (!analysis || !values.final_defect_type) {
-        throw new Error("Choose a final defect category before submitting.");
-      }
-      return api.finalizeInspection(loggedInUserId, {
-        inspection_id: analysis.inspection_id,
-        final_defect_type: values.final_defect_type,
-        ...(values.comments.trim() ? { comments: values.comments.trim() } : {}),
-      });
-    },
+  const submitMutation = useFinalizeInspection(loggedInUserId, {
     onSuccess: async () => {
+      // Invalidate previously fetched dashboard data and inspections.
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.dashboard(loggedInUserId),
@@ -205,9 +200,25 @@ export function NewInspectionPage() {
     const valid = await analysisForm.trigger();
     if (!valid) return;
     const values = analysisForm.getValues();
-    if (!values.image) return;
-    setAnalysis(null);
-    analyzeMutation.mutate({ batchId: values.batch_id, image: values.image });
+    if (!values.image || values.image.type !== "upload") return;
+    analyzeMutation.reset();
+    // Start the API request through the mutation hook.
+    analyzeMutation.mutate({
+      batchId: values.batch_id,
+      image: values.image.file,
+    });
+  };
+
+  const onSubmitDecision = (values: DecisionValues) => {
+    if (!analysis || !values.final_defect_type) {
+      setFormError("Choose a final defect category before submitting.");
+      return;
+    }
+    submitMutation.mutate({
+      inspection_id: analysis.inspection_id,
+      final_defect_type: values.final_defect_type,
+      ...(values.comments.trim() ? { comments: values.comments.trim() } : {}),
+    });
   };
 
   const setFinalType = (value: DefectType, intent: "accept" | "override") => {
@@ -222,14 +233,6 @@ export function NewInspectionPage() {
     }
   };
 
-  const resetAnalysis = () => {
-    setAnalysis(null);
-    setFormError(undefined);
-    analyzeMutation.reset();
-    submitMutation.reset();
-    decisionForm.reset({ final_defect_type: undefined, comments: "" });
-  };
-
   const selectedBatch = batchesQuery.data?.find(
     (batch) => batch.batch_id === selectedBatchId,
   );
@@ -238,9 +241,9 @@ export function NewInspectionPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={initialAnalysis ? "Review inspection" : "New inspection"}
+        title={isRedirectionFlow ? "Review inspection" : "New inspection"}
         description={
-          initialAnalysis
+          isRedirectionFlow
             ? "Review the saved AI suggestion and record your final decision."
             : "Analyze a product image, review the suggestion, and record your final decision."
         }
@@ -298,7 +301,7 @@ export function NewInspectionPage() {
                         value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value);
-                          resetAnalysis();
+                          setFormError(undefined);
                         }}
                         disabled={
                           batchesQuery.isPending || Boolean(analysis) || isBusy
@@ -359,11 +362,11 @@ export function NewInspectionPage() {
                 <div className="space-y-2">
                   <Label htmlFor="product-image">Product image</Label>
                   <div className="rounded-xl border border-dashed bg-background p-4 sm:p-5">
-                    {reviewInspection?.status === "UNREVIEWED" ? (
+                    {storedImageRef ? (
                       <ProtectedImage
-                        imageRef={reviewInspection.image_ref}
+                        imageRef={storedImageRef}
                         loggedInUserId={loggedInUserId}
-                        alt={`Product image for ${reviewInspection.batch_number}`}
+                        alt={`Product image for ${selectedBatch?.batch_number ?? "inspection"}`}
                         className="max-h-64 w-full"
                       />
                     ) : (
@@ -376,11 +379,15 @@ export function NewInspectionPage() {
                         aria-describedby="image-help"
                         onChange={(event) => {
                           const file = event.target.files?.[0];
-                          analysisForm.setValue("image", file, {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          });
-                          resetAnalysis();
+                          analysisForm.setValue(
+                            "image",
+                            file ? { type: "upload", file } : undefined,
+                            {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            },
+                          );
+                          setFormError(undefined);
                         }}
                         className="cursor-pointer file:mr-4 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium"
                       />
@@ -397,7 +404,7 @@ export function NewInspectionPage() {
                         {analysisForm.formState.errors.image.message}
                       </p>
                     )}
-                    {selectedImage && previewUrl && (
+                    {selectedImageFile && previewUrl && (
                       <div className="mt-4 flex items-center gap-4 rounded-lg border bg-card p-3">
                         <img
                           src={previewUrl}
@@ -406,10 +413,12 @@ export function NewInspectionPage() {
                         />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">
-                            {selectedImage.name}
+                            {selectedImageFile.name}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {(selectedImage.size / (1024 * 1024)).toFixed(2)}{" "}
+                            {(selectedImageFile.size / (1024 * 1024)).toFixed(
+                              2,
+                            )}{" "}
                             MiB
                           </p>
                         </div>
@@ -418,7 +427,7 @@ export function NewInspectionPage() {
                   </div>
                 </div>
 
-                {!analysis ? (
+                {!analysis && (
                   <Button
                     onClick={() => void onAnalyze()}
                     disabled={analyzeMutation.isPending}
@@ -435,15 +444,7 @@ export function NewInspectionPage() {
                       "Analyze image"
                     )}
                   </Button>
-                ) : !initialAnalysis ? (
-                  <Button
-                    variant="outline"
-                    onClick={resetAnalysis}
-                    disabled={isBusy}
-                  >
-                    <RotateCcw aria-hidden="true" /> Analyze another image
-                  </Button>
-                ) : null}
+                )}
               </>
             )}
           </CardContent>
@@ -561,9 +562,7 @@ export function NewInspectionPage() {
               ) : (
                 <form
                   className="space-y-4"
-                  onSubmit={decisionForm.handleSubmit((values) =>
-                    submitMutation.mutate(values),
-                  )}
+                  onSubmit={decisionForm.handleSubmit(onSubmitDecision)}
                 >
                   <Button
                     type="button"

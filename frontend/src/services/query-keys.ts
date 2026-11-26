@@ -1,3 +1,4 @@
+// Centralizes TanStack Query cache keys used by query hooks and cache invalidation after mutations.
 import type { InspectionFilters } from "@/types/api";
 
 export const queryKeys = {

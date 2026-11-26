@@ -1,3 +1,5 @@
+// Defines typed Actual HTTP calls to the backend;
+// Used as queryFn in useQuery and useMutations
 import type {
   AIAnalysis,
   Batch,

@@ -1,8 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { ImageOff } from "lucide-react";
-import { api } from "@/services/api";
-import { queryKeys } from "@/services/query-keys";
 import { useObjectUrl } from "@/hooks/use-object-url";
+import { useInspectionImage } from "@/services/queries";
 
 export function ProtectedImage({
   imageRef,
@@ -15,11 +13,7 @@ export function ProtectedImage({
   alt: string;
   className?: string;
 }) {
-  const imageQuery = useQuery({
-    queryKey: queryKeys.image(loggedInUserId, imageRef),
-    queryFn: ({ signal }) => api.getImage(loggedInUserId, imageRef, signal),
-    staleTime: Infinity,
-  });
+  const imageQuery = useInspectionImage(loggedInUserId, imageRef);
   const objectUrl = useObjectUrl(imageQuery.data);
 
   if (imageQuery.isError || (!imageQuery.isPending && !imageQuery.data)) {
