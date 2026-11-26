@@ -12,7 +12,7 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useDemoUser } from "@/app/demo-user-context";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,14 @@ import {
 import { useBatches } from "@/services/queries";
 import { api, ApiError } from "@/services/api";
 import { queryKeys } from "@/services/query-keys";
-import { DEFECT_TYPES, type AIAnalysis, type DefectType } from "@/types/api";
+import {
+  DEFECT_TYPES,
+  type AIAnalysis,
+  type DefectType,
+  type Inspection,
+} from "@/types/api";
 import { useObjectUrl } from "@/hooks/use-object-url";
+import { ProtectedImage } from "@/components/protected-image";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -85,14 +91,40 @@ type DecisionValues = z.infer<typeof decisionSchema>;
 export function NewInspectionPage() {
   const { demoUserId } = useDemoUser();
   const navigate = useNavigate();
+  const location = useLocation();
+  const reviewInspection = (
+    location.state as { reviewInspection?: Inspection } | null
+  )?.reviewInspection;
+  const initialAnalysis: AIAnalysis | null =
+    reviewInspection?.status === "UNREVIEWED"
+      ? {
+          inspection_id: reviewInspection.inspection_id,
+          status: reviewInspection.status,
+          batch_id: reviewInspection.batch_id,
+          image_url: reviewInspection.image_url,
+          prediction: {
+            defect_type: reviewInspection.original_ai_prediction,
+            confidence: reviewInspection.ai_confidence,
+            provider: reviewInspection.ai_provider,
+            model: reviewInspection.ai_model,
+          },
+          created_at: "",
+        }
+      : null;
   const queryClient = useQueryClient();
   const batchesQuery = useBatches(demoUserId);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<AIAnalysis | null>(initialAnalysis);
   const [formError, setFormError] = useState<string>();
   const analysisForm = useForm<AnalysisValues>({
     resolver: zodResolver(analysisSchema),
-    defaultValues: { batch_id: "", image: undefined },
+    defaultValues: {
+      batch_id:
+        reviewInspection?.status === "UNREVIEWED"
+          ? reviewInspection.batch_id
+          : "",
+      image: undefined,
+    },
   });
   const decisionForm = useForm<DecisionValues>({
     resolver: zodResolver(decisionSchema),
@@ -137,8 +169,8 @@ export function NewInspectionPage() {
       if (!analysis || !values.final_defect_type) {
         throw new Error("Choose a final defect category before submitting.");
       }
-      return api.submitInspection(demoUserId, {
-        analysis_id: analysis.analysis_id,
+      return api.finalizeInspection(demoUserId, {
+        inspection_id: analysis.inspection_id,
         final_defect_type: values.final_defect_type,
         ...(values.comments.trim() ? { comments: values.comments.trim() } : {}),
       });
@@ -204,14 +236,17 @@ export function NewInspectionPage() {
   const isBusy = analyzeMutation.isPending || submitMutation.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Quality Engineer workflow"
-        title="New inspection"
-        description="Analyze a product image, review the suggestion, and record your final decision."
+        title={initialAnalysis ? "Review inspection" : "New inspection"}
+        description={
+          initialAnalysis
+            ? "Review the saved AI suggestion and record your final decision."
+            : "Analyze a product image, review the suggestion, and record your final decision."
+        }
         action={
           <Badge variant="outline" className="gap-1.5">
-            <Sparkles className="size-3.5" aria-hidden="true" />
+            <Sparkles className="sparkle-icon size-3.5" aria-hidden="true" />
             AI recommends · you decide
           </Badge>
         }
@@ -230,7 +265,7 @@ export function NewInspectionPage() {
         </div>
       )}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -295,45 +330,61 @@ export function NewInspectionPage() {
                   )}
                 </div>
 
-                {selectedBatch && (
-                  <div className="grid gap-3 rounded-lg bg-muted/60 p-4 sm:grid-cols-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Product</p>
-                      <p className="mt-1 text-sm font-medium">
-                        {selectedBatch.product_name}
-                      </p>
+                <div className="min-h-[76px]">
+                  {selectedBatch ? (
+                    <div className="grid gap-3 rounded-lg bg-muted/60 p-4 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Product</p>
+                        <p className="mt-1 text-sm font-medium">
+                          {selectedBatch.product_name}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Production line
+                        </p>
+                        <p className="mt-1 text-sm font-medium">
+                          {selectedBatch.production_line}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Production line
-                      </p>
-                      <p className="mt-1 text-sm font-medium">
-                        {selectedBatch.production_line}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  ) : (
+                    <div
+                      className="h-[76px] rounded-lg border border-dashed bg-muted/20"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="product-image">Product image</Label>
                   <div className="rounded-xl border border-dashed bg-background p-4 sm:p-5">
-                    <Input
-                      ref={fileInputRef}
-                      id="product-image"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      disabled={Boolean(analysis) || isBusy}
-                      aria-describedby="image-help"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        analysisForm.setValue("image", file, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        });
-                        resetAnalysis();
-                      }}
-                      className="cursor-pointer file:mr-4 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium"
-                    />
+                    {reviewInspection?.status === "UNREVIEWED" ? (
+                      <ProtectedImage
+                        imageRef={reviewInspection.image_ref}
+                        demoUserId={demoUserId}
+                        alt={`Product image for ${reviewInspection.batch_number}`}
+                        className="max-h-64 w-full"
+                      />
+                    ) : (
+                      <Input
+                        ref={fileInputRef}
+                        id="product-image"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={Boolean(analysis) || isBusy}
+                        aria-describedby="image-help"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          analysisForm.setValue("image", file, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                          resetAnalysis();
+                        }}
+                        className="cursor-pointer file:mr-4 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium"
+                      />
+                    )}
                     <p
                       id="image-help"
                       className="mt-2 text-xs text-muted-foreground"
@@ -381,12 +432,10 @@ export function NewInspectionPage() {
                         Analyzing image…
                       </>
                     ) : (
-                      <>
-                        <Sparkles aria-hidden="true" /> Analyze image
-                      </>
+                      "Analyze image"
                     )}
                   </Button>
-                ) : (
+                ) : !initialAnalysis ? (
                   <Button
                     variant="outline"
                     onClick={resetAnalysis}
@@ -394,13 +443,13 @@ export function NewInspectionPage() {
                   >
                     <RotateCcw aria-hidden="true" /> Analyze another image
                   </Button>
-                )}
+                ) : null}
               </>
             )}
           </CardContent>
         </Card>
 
-        <div className="space-y-5">
+        <div className="flex flex-col gap-4 xl:h-full">
           <Card aria-live="polite">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -491,7 +540,7 @@ export function NewInspectionPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="xl:flex-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="grid size-7 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">

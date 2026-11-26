@@ -15,6 +15,8 @@ vi.mock("@/services/queries", () => ({
       passed_inspections: 0,
       rejected_inspections: 0,
       defect_rate: 0,
+      ai_accepted_count: 0,
+      ai_overridden_count: 0,
       ai_acceptance_rate: 0,
       defect_breakdown: [],
     },

@@ -21,7 +21,7 @@ Services depend on repository contracts. `APP_MODE=database` selects PostgreSQL 
 
 Prediction uploads and validates an image, verifies the batch, asks the configured provider, validates its JSON and confidence/category, stores a server-generated image reference, and creates an unreviewed analysis owned by the selected inspector. It is not yet a completed inspection. In PostgreSQL mode, this is one `inspections` table row with status `UNREVIEWED`.
 
-Submission accepts only the analysis ID, final classification, and optional comment. The server checks ownership, batch, stored image, preserves original prediction/provider metadata, computes the override flag, and prevents a second submission. In PostgreSQL mode it updates that same row to `REVIEWED` in one transaction. History and dashboard queries include reviewed records only. The browser cannot supply an authoritative role, AI prediction/confidence, or override flag.
+`POST /api/v1/finalize-inspection` accepts only the `inspection_id`, final classification, and optional comment. The server checks ownership, batch, and stored image, preserves original prediction/provider metadata, computes the override flag, and prevents a second finalization. In PostgreSQL mode it updates that same row to `REVIEWED` in one transaction. History and dashboard queries include reviewed records only. The browser cannot supply an authoritative role, AI prediction/confidence, or override flag.
 
 Demo identity is selected with `X-User-Id` (`1` for Priya or `2` for Rahul). The role is always looked up in repository data. This is a demo selection mechanism, not production authentication.
 

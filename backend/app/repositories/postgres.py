@@ -118,13 +118,13 @@ class PostgresInspectionLifecycleRepository:
                 )
             )
 
-    def get(self, analysis_id: str) -> PendingAnalysis | None:
+    def get(self, inspection_id: str) -> PendingAnalysis | None:
         try:
-            UUID(analysis_id)
+            UUID(inspection_id)
         except ValueError:
             return None
         with self.sessions() as session:
-            row = session.get(InspectionRow, analysis_id)
+            row = session.get(InspectionRow, inspection_id)
             return self._domain(row) if row else None
 
 
@@ -156,6 +156,7 @@ class PostgresInspectionRepository:
     def list_page(
         self,
         *,
+        status: InspectionStatus,
         defect_type: DefectType | None,
         batch_id: str | None,
         inspector_id: str | None,
@@ -165,21 +166,34 @@ class PostgresInspectionRepository:
         page_size: int,
         sort_by: str,
         sort_order: str,
-    ) -> tuple[list[Inspection], int]:
-        filters = []
-        filters.append(InspectionRow.status == InspectionStatus.REVIEWED.value)
+    ) -> tuple[list[Inspection | PendingAnalysis], int]:
+        filters = [InspectionRow.status == status.value]
         if defect_type is not None:
-            filters.append(InspectionRow.final_defect_type == defect_type.value)
+            category_column = (
+                InspectionRow.final_defect_type
+                if status == InspectionStatus.REVIEWED
+                else InspectionRow.original_ai_prediction
+            )
+            filters.append(category_column == defect_type.value)
         if batch_id is not None:
             filters.append(InspectionRow.batch_id == batch_id)
         if inspector_id is not None:
             filters.append(InspectionRow.inspector_id == inspector_id)
+        timestamp_column = (
+            InspectionRow.inspected_at
+            if status == InspectionStatus.REVIEWED
+            else InspectionRow.analyzed_at
+        )
         if date_from is not None:
-            filters.append(InspectionRow.inspected_at >= date_from)
+            filters.append(timestamp_column >= date_from)
         if date_to is not None:
-            filters.append(InspectionRow.inspected_at <= date_to)
+            filters.append(timestamp_column <= date_to)
 
         sort_column = self._sort_columns[sort_by]
+        if sort_by == "inspected_at" and status == InspectionStatus.UNREVIEWED:
+            sort_column = InspectionRow.analyzed_at
+        elif sort_by == "final_defect_type" and status == InspectionStatus.UNREVIEWED:
+            sort_column = InspectionRow.original_ai_prediction
         ordering = sort_column.asc() if sort_order == "asc" else sort_column.desc()
         tie_breaker = (
             InspectionRow.inspection_id.asc()
@@ -197,7 +211,12 @@ class PostgresInspectionRepository:
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
-            return [_inspection(row) for row in rows], int(total)
+            return [
+                _inspection(row)
+                if status == InspectionStatus.REVIEWED
+                else PostgresInspectionLifecycleRepository._domain(row)
+                for row in rows
+            ], int(total)
 
     def dashboard_counts(self) -> dict[DefectType, int]:
         with self.sessions() as session:
@@ -228,15 +247,15 @@ class PostgresInspectionSubmissionRepository:
     def __init__(self, sessions: sessionmaker[Session]) -> None:
         self.sessions = sessions
 
-    def submit_pending(self, analysis_id: str, inspection: Inspection) -> bool:
+    def submit_pending(self, inspection_id: str, inspection: Inspection) -> bool:
         try:
-            UUID(analysis_id)
+            UUID(inspection_id)
         except ValueError:
             return False
         with self.sessions.begin() as session:
             analysis_row = session.scalar(
                 select(InspectionRow)
-                .where(InspectionRow.inspection_id == analysis_id)
+                .where(InspectionRow.inspection_id == inspection_id)
                 .with_for_update()
             )
             if analysis_row is None or analysis_row.status != InspectionStatus.UNREVIEWED.value:

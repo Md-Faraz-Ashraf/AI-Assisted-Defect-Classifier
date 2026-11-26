@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity,
-  ArrowRight,
   CheckCircle2,
   CircleAlert,
   ClipboardCheck,
@@ -48,14 +47,16 @@ function MetricCard({
 }) {
   return (
     <Card>
-      <CardContent className="flex items-start justify-between gap-4 p-5">
+      <CardContent className="flex items-start justify-between gap-2 px-3 py-2">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight">{value}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          <p className="text-xs font-medium text-muted-foreground">{label}</p>
+          <p className="mt-0.5 text-2xl font-semibold tracking-tight">
+            {value}
+          </p>
+          <p className="text-[11px] text-muted-foreground">{description}</p>
         </div>
-        <span className="grid size-10 place-items-center rounded-xl bg-muted">
-          <Icon className={`size-5 ${accent}`} aria-hidden="true" />
+        <span className="grid size-8 place-items-center rounded-lg bg-muted">
+          <Icon className={`size-3.5 ${accent}`} aria-hidden="true" />
         </span>
       </CardContent>
     </Card>
@@ -104,18 +105,10 @@ export function DashboardPage() {
   );
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Quality overview"
         title="Inspection dashboard"
         description="A live view of confirmed inspection outcomes and AI-assisted review activity."
-        action={
-          <Button asChild>
-            <Link to="/inspections">
-              View inspection history <ArrowRight aria-hidden="true" />
-            </Link>
-          </Button>
-        }
       />
 
       <section
@@ -151,7 +144,63 @@ export function DashboardPage() {
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="sparkle-icon size-4" aria-hidden="true" />
+              AI acceptance rate
+            </CardTitle>
+            <CardDescription>
+              Share of inspections where the inspector accepted the suggestion.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Accepted</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {summary.ai_accepted_count.toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Overridden</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {summary.ai_overridden_count.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Accepted ÷ (Accepted + Overridden) × 100 =
+            </p>
+            <div className="flex items-end gap-3">
+              <p className="text-5xl font-semibold tracking-tight">
+                {summary.ai_acceptance_rate.toFixed(1)}%
+              </p>
+              <p className="pb-1 text-sm text-muted-foreground">
+                of submitted inspections
+              </p>
+            </div>
+            <div
+              className="mt-5 h-2 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-label="AI acceptance rate"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={summary.ai_acceptance_rate}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{ width: `${summary.ai_acceptance_rate}%` }}
+              />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Accepted No Defect predictions count as accepted decisions.
+              Confidence scores are indicative, not calibrated probabilities.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Final defect breakdown</CardTitle>
@@ -230,45 +279,6 @@ export function DashboardPage() {
                 </ul>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="size-4 text-primary" aria-hidden="true" />
-              AI acceptance rate
-            </CardTitle>
-            <CardDescription>
-              Share of inspections where the inspector accepted the suggestion.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-3">
-              <p className="text-5xl font-semibold tracking-tight">
-                {summary.ai_acceptance_rate.toFixed(1)}%
-              </p>
-              <p className="pb-1 text-sm text-muted-foreground">
-                of submitted inspections
-              </p>
-            </div>
-            <div
-              className="mt-5 h-2 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-label="AI acceptance rate"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={summary.ai_acceptance_rate}
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-[width]"
-                style={{ width: `${summary.ai_acceptance_rate}%` }}
-              />
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Accepted No Defect predictions count as accepted decisions.
-              Confidence scores are indicative, not calibrated probabilities.
-            </p>
           </CardContent>
         </Card>
       </section>

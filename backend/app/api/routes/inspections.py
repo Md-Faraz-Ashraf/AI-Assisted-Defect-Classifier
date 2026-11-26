@@ -6,24 +6,25 @@ from fastapi import APIRouter, Depends, Query
 from app.dependencies.auth import get_current_user, require_quality_engineer
 from app.dependencies.common import get_container
 from app.dependencies.container import AppContainer
-from app.models.domain import DefectType, User
-from app.schemas.api import InspectionCreate, InspectionPage, InspectionResponse
+from app.models.domain import DefectType, InspectionStatus, User
+from app.schemas.api import InspectionFinalizeRequest, InspectionPage, InspectionResponse
 from app.services.inspection import InspectionService
 
 router = APIRouter(tags=["inspections"])
 
 
-@router.post("/inspections", response_model=InspectionResponse, status_code=201)
-def create_inspection(
-    payload: InspectionCreate,
+@router.post("/finalize-inspection", response_model=InspectionResponse)
+def finalize_inspection(
+    payload: InspectionFinalizeRequest,
     user: User = Depends(require_quality_engineer),
     container: AppContainer = Depends(get_container),
 ) -> InspectionResponse:
-    return InspectionService(container).submit(payload, user)
+    return InspectionService(container).finalize(payload, user)
 
 
-@router.get("/inspections", response_model=InspectionPage)
+@router.get("/inspections/list", response_model=InspectionPage)
 def list_inspections(
+    status: InspectionStatus = InspectionStatus.REVIEWED,
     defect_type: DefectType | None = None,
     batch_id: Annotated[str | None, Query(max_length=64)] = None,
     inspector_id: Annotated[str | None, Query(max_length=64)] = None,
@@ -39,6 +40,7 @@ def list_inspections(
     container: AppContainer = Depends(get_container),
 ) -> InspectionPage:
     return InspectionService(container).list_inspections(
+        status=status,
         defect_type=defect_type,
         batch_id=batch_id,
         inspector_id=inspector_id,

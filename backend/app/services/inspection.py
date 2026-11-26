@@ -20,7 +20,7 @@ from app.models.domain import (
 from app.schemas.ai import ProviderPrediction
 from app.schemas.api import (
     AIResponse,
-    InspectionCreate,
+    InspectionFinalizeRequest,
     InspectionPage,
     InspectionResponse,
     PredictionResponse,
@@ -102,7 +102,7 @@ class InspectionService:
         # Save the analysis in inspections table and return it FE
         self.container.pending_analysis_repository.add(analysis)
         return AIResponse(
-            analysis_id=analysis.inspection_id,
+            inspection_id=analysis.inspection_id,
             status=InspectionStatus.UNREVIEWED,
             batch_id=batch.batch_id,
             image_url=f"/api/v1/images/{image_ref}",
@@ -115,8 +115,8 @@ class InspectionService:
             created_at=analysis.created_at,
         )
 
-    def submit(self, payload: InspectionCreate, user: User) -> InspectionResponse:
-        analysis = self.container.pending_analysis_repository.get(payload.analysis_id)
+    def finalize(self, payload: InspectionFinalizeRequest, user: User) -> InspectionResponse:
+        analysis = self.container.pending_analysis_repository.get(payload.inspection_id)
         if analysis is None:
             raise AppError(404, "analysis_not_found", "The AI analysis does not exist.")
         if analysis.inspector_id != user.user_id:
@@ -157,6 +157,7 @@ class InspectionService:
     def list_inspections(
         self,
         *,
+        status: InspectionStatus,
         defect_type: DefectType | None,
         batch_id: str | None,
         inspector_id: str | None,
@@ -176,6 +177,7 @@ class InspectionService:
                 422, "invalid_date_range", "date_from must be earlier than or equal to date_to."
             )
         rows, total = self.container.inspection_repository.list_page(
+            status=status,
             defect_type=defect_type,
             batch_id=batch_id,
             inspector_id=inspector_id,
@@ -219,11 +221,32 @@ class InspectionService:
 
     @staticmethod
     def _inspection_response(
-        inspection: Inspection, batch: Batch, inspector_name: str
+        inspection: Inspection | PendingAnalysis, batch: Batch, inspector_name: str
     ) -> InspectionResponse:
+        if isinstance(inspection, Inspection):
+            status = InspectionStatus.REVIEWED
+            prediction = inspection.original_ai_prediction
+            confidence = inspection.ai_confidence
+            provider = inspection.ai_provider
+            model = inspection.ai_model
+            final_defect_type = inspection.final_defect_type
+            was_overridden = inspection.was_overridden
+            comments = inspection.comments
+            inspected_at = inspection.inspected_at
+        else:
+            status = InspectionStatus.UNREVIEWED
+            prediction = inspection.prediction.defect_type
+            confidence = inspection.prediction.confidence
+            provider = inspection.prediction.provider
+            model = inspection.prediction.model
+            final_defect_type = None
+            was_overridden = None
+            comments = None
+            inspected_at = None
+
         return InspectionResponse(
             inspection_id=inspection.inspection_id,
-            status=InspectionStatus.REVIEWED,
+            status=status,
             batch_id=inspection.batch_id,
             batch_number=batch.batch_number,
             product_name=batch.product_name,
@@ -231,12 +254,12 @@ class InspectionService:
             inspector_name=inspector_name,
             image_ref=inspection.image_ref,
             image_url=f"/api/v1/images/{inspection.image_ref}",
-            original_ai_prediction=inspection.original_ai_prediction,
-            ai_confidence=inspection.ai_confidence,
-            ai_provider=inspection.ai_provider,
-            ai_model=inspection.ai_model,
-            final_defect_type=inspection.final_defect_type,
-            was_overridden=inspection.was_overridden,
-            comments=inspection.comments,
-            inspected_at=inspection.inspected_at,
+            original_ai_prediction=prediction,
+            ai_confidence=confidence,
+            ai_provider=provider,
+            ai_model=model,
+            final_defect_type=final_defect_type,
+            was_overridden=was_overridden,
+            comments=comments,
+            inspected_at=inspected_at,
         )

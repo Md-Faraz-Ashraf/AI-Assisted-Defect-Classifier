@@ -49,12 +49,19 @@ class MockPendingAnalysisRepository:
     def add(self, analysis: PendingAnalysis) -> None:
         self._analyses[analysis.inspection_id] = analysis
 
-    def get(self, analysis_id: str) -> PendingAnalysis | None:
-        return self._analyses.get(analysis_id)
+    def get(self, inspection_id: str) -> PendingAnalysis | None:
+        return self._analyses.get(inspection_id)
 
-    def mark_reviewed(self, analysis_id: str) -> bool:
+    def list_unreviewed(self) -> list[PendingAnalysis]:
+        return [
+            analysis
+            for analysis in self._analyses.values()
+            if analysis.status == InspectionStatus.UNREVIEWED
+        ]
+
+    def mark_reviewed(self, inspection_id: str) -> bool:
         with self._submission_lock:
-            analysis = self._analyses.get(analysis_id)
+            analysis = self._analyses.get(inspection_id)
             if analysis is None or analysis.submitted:
                 return False
             analysis.status = InspectionStatus.REVIEWED
@@ -62,8 +69,9 @@ class MockPendingAnalysisRepository:
 
 
 class MockInspectionRepository:
-    def __init__(self) -> None:
+    def __init__(self, analyses: MockPendingAnalysisRepository) -> None:
         self._inspections: dict[str, Inspection] = {}
+        self._analyses = analyses
 
     def dashboard_accepted_count(self) -> int:
         return sum(not row.was_overridden for row in self._inspections.values())
@@ -77,6 +85,7 @@ class MockInspectionRepository:
     def list_page(
         self,
         *,
+        status: InspectionStatus,
         defect_type: DefectType | None,
         batch_id: str | None,
         inspector_id: str | None,
@@ -86,23 +95,52 @@ class MockInspectionRepository:
         page_size: int,
         sort_by: str,
         sort_order: str,
-    ) -> tuple[list[Inspection], int]:
-        records = list(self._inspections.values())
+    ) -> tuple[list[Inspection | PendingAnalysis], int]:
+        if status == InspectionStatus.UNREVIEWED:
+            records: list[Inspection | PendingAnalysis] = [
+                row for row in self._analyses.list_unreviewed()
+            ]
+        else:
+            records = list(self._inspections.values())
         if defect_type is not None:
-            records = [row for row in records if row.final_defect_type == defect_type]
+            records = [
+                row
+                for row in records
+                if (
+                    row.final_defect_type
+                    if isinstance(row, Inspection)
+                    else row.prediction.defect_type
+                )
+                == defect_type
+            ]
         if batch_id is not None:
             records = [row for row in records if row.batch_id == batch_id]
         if inspector_id is not None:
             records = [row for row in records if row.inspector_id == inspector_id]
         if date_from is not None:
-            records = [row for row in records if row.inspected_at >= date_from]
+            records = [
+                row
+                for row in records
+                if (row.inspected_at if isinstance(row, Inspection) else row.created_at)
+                >= date_from
+            ]
         if date_to is not None:
-            records = [row for row in records if row.inspected_at <= date_to]
+            records = [
+                row
+                for row in records
+                if (row.inspected_at if isinstance(row, Inspection) else row.created_at) <= date_to
+            ]
 
         sort_key = {
-            "inspected_at": lambda row: row.inspected_at,
+            "inspected_at": lambda row: (
+                row.inspected_at if isinstance(row, Inspection) else row.created_at
+            ),
             "batch_id": lambda row: row.batch_id,
-            "final_defect_type": lambda row: row.final_defect_type.value,
+            "final_defect_type": lambda row: (
+                row.final_defect_type.value
+                if isinstance(row, Inspection)
+                else row.prediction.defect_type.value
+            ),
             "inspector_id": lambda row: row.inspector_id,
         }[sort_by]
         records.sort(
@@ -132,10 +170,10 @@ class MockInspectionSubmissionRepository:
         self.inspections = inspections
         self._lock = Lock()
 
-    def submit_pending(self, analysis_id: str, inspection: Inspection) -> bool:
+    def submit_pending(self, inspection_id: str, inspection: Inspection) -> bool:
         with self._lock:
-            analysis = self.analyses.get(analysis_id)
+            analysis = self.analyses.get(inspection_id)
             if analysis is None or analysis.submitted:
                 return False
             self.inspections.add(inspection)
-            return self.analyses.mark_reviewed(analysis_id)
+            return self.analyses.mark_reviewed(inspection_id)

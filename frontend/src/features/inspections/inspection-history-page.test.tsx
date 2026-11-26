@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { InspectionHistoryPage } from "./inspection-history-page";
 
@@ -16,7 +17,11 @@ vi.mock("@/services/queries", () => ({
 
 describe("inspection history", () => {
   it("renders defect and batch filters with a useful initial empty state", () => {
-    render(<InspectionHistoryPage />);
+    render(
+      <MemoryRouter>
+        <InspectionHistoryPage />
+      </MemoryRouter>,
+    );
 
     expect(
       screen.getByRole("heading", { name: "Inspection history" }),
@@ -27,7 +32,7 @@ describe("inspection history", () => {
     expect(
       screen.getByRole("combobox", { name: "Filter by batch" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("No inspections yet")).toBeInTheDocument();
+    expect(screen.getByText("No reviewed inspections yet")).toBeInTheDocument();
     expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
   });
 });

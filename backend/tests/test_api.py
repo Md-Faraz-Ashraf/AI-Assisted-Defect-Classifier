@@ -19,11 +19,11 @@ def request_prediction(
     )
 
 
-def submit(client, headers, analysis_id, final_defect_type, **extra):
+def finalize(client, headers, inspection_id, final_defect_type, **extra):
     return client.post(
-        "/api/v1/inspections",
+        "/api/v1/finalize-inspection",
         headers=headers,
-        json={"analysis_id": analysis_id, "final_defect_type": final_defect_type, **extra},
+        json={"inspection_id": inspection_id, "final_defect_type": final_defect_type, **extra},
     )
 
 
@@ -45,7 +45,7 @@ def test_missing_or_unknown_user_id_is_rejected(client):
     assert response.json()["error"]["code"] == "unknown_user_id"
 
 
-def test_quality_engineer_can_predict_and_submit_with_original_prediction_preserved(
+def test_quality_engineer_can_predict_and_finalize_with_original_prediction_preserved(
     client, engineer_headers, png_bytes
 ):
     predicted = request_prediction(client, engineer_headers, png_bytes)
@@ -60,16 +60,16 @@ def test_quality_engineer_can_predict_and_submit_with_original_prediction_preser
     final_type = next(
         kind.value for kind in DefectType if kind.value != body["prediction"]["defect_type"]
     )
-    submitted = submit(
+    submitted = finalize(
         client,
         engineer_headers,
-        body["analysis_id"],
+        body["inspection_id"],
         final_type,
         comments="Reviewed at the inspection station.",
     )
-    assert submitted.status_code == 201
+    assert submitted.status_code == 200
     record = submitted.json()
-    assert record["inspection_id"] == body["analysis_id"]
+    assert record["inspection_id"] == body["inspection_id"]
     assert record["status"] == "REVIEWED"
     assert record["original_ai_prediction"] == body["prediction"]["defect_type"]
     assert record["final_defect_type"] == final_type
@@ -79,10 +79,10 @@ def test_quality_engineer_can_predict_and_submit_with_original_prediction_preser
 
 def test_accepted_prediction_sets_override_false(client, engineer_headers, png_bytes):
     analysis = request_prediction(client, engineer_headers, png_bytes).json()
-    response = submit(
-        client, engineer_headers, analysis["analysis_id"], analysis["prediction"]["defect_type"]
+    response = finalize(
+        client, engineer_headers, analysis["inspection_id"], analysis["prediction"]["defect_type"]
     )
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert response.json()["was_overridden"] is False
 
 
@@ -102,7 +102,7 @@ def test_prediction_rejects_unknown_batch(client, engineer_headers, png_bytes):
     ("headers", "path", "method"),
     [
         ({"X-User-Id": "2"}, "/api/v1/ai/predict", "predict"),
-        ({"X-User-Id": "2"}, "/api/v1/inspections", "submit"),
+        ({"X-User-Id": "2"}, "/api/v1/finalize-inspection", "finalize"),
     ],
 )
 def test_supervisor_is_forbidden_from_mutations(client, headers, path, method, png_bytes):
@@ -112,7 +112,7 @@ def test_supervisor_is_forbidden_from_mutations(client, headers, path, method, p
         response = client.post(
             path,
             headers=headers,
-            json={"analysis_id": "not-owned", "final_defect_type": "Scratch"},
+            json={"inspection_id": "not-owned", "final_defect_type": "Scratch"},
         )
     assert response.status_code == 403
 
@@ -126,10 +126,10 @@ def test_browser_cannot_supply_role_or_prediction_values(client, engineer_header
         == 200
     )
     response = client.post(
-        "/api/v1/inspections",
+        "/api/v1/finalize-inspection",
         headers=engineer_headers,
         json={
-            "analysis_id": "fabricated",
+            "inspection_id": "fabricated",
             "final_defect_type": "Scratch",
             "original_ai_prediction": "No Defect",
             "ai_confidence": 1,
@@ -139,23 +139,23 @@ def test_browser_cannot_supply_role_or_prediction_values(client, engineer_header
     assert response.status_code == 422
 
 
-def test_analysis_must_belong_to_same_user_and_cannot_be_submitted_twice(
+def test_inspection_must_belong_to_same_user_and_cannot_be_finalized_twice(
     client, engineer_headers, png_bytes
 ):
     analysis = request_prediction(client, engineer_headers, png_bytes).json()
-    other_user = submit(client, {"X-User-Id": "2"}, analysis["analysis_id"], "Scratch")
+    other_user = finalize(client, {"X-User-Id": "2"}, analysis["inspection_id"], "Scratch")
     assert other_user.status_code == 403
-    accepted = submit(
+    accepted = finalize(
         client,
         engineer_headers,
-        analysis["analysis_id"],
+        analysis["inspection_id"],
         analysis["prediction"]["defect_type"],
     )
-    assert accepted.status_code == 201
-    duplicate = submit(
+    assert accepted.status_code == 200
+    duplicate = finalize(
         client,
         engineer_headers,
-        analysis["analysis_id"],
+        analysis["inspection_id"],
         analysis["prediction"]["defect_type"],
     )
     assert duplicate.status_code == 409
@@ -168,10 +168,10 @@ def test_analysis_cannot_be_submitted_by_another_quality_engineer(
         "3", "Anita", UserRole.QUALITY_ENGINEER
     )
     analysis = request_prediction(client, engineer_headers, png_bytes).json()
-    response = submit(
+    response = finalize(
         client,
         {"X-User-Id": "3"},
-        analysis["analysis_id"],
+        analysis["inspection_id"],
         "Scratch",
     )
     assert response.status_code == 403
@@ -181,11 +181,11 @@ def test_analysis_cannot_be_submitted_by_another_quality_engineer(
 def test_list_filtering_pagination_sorting_and_detail(client, engineer_headers, png_bytes):
     for final_type in ("Scratch", "Dent", "Scratch"):
         analysis = request_prediction(client, engineer_headers, png_bytes).json()
-        response = submit(client, engineer_headers, analysis["analysis_id"], final_type)
-        assert response.status_code == 201
+        response = finalize(client, engineer_headers, analysis["inspection_id"], final_type)
+        assert response.status_code == 200
 
     page = client.get(
-        "/api/v1/inspections?defect_type=Scratch&page=1&page_size=1&sort_by=inspected_at&sort_order=asc",
+        "/api/v1/inspections/list?defect_type=Scratch&page=1&page_size=1&sort_by=inspected_at&sort_order=asc",
         headers=engineer_headers,
     )
     assert page.status_code == 200
@@ -204,9 +204,9 @@ def test_list_filtering_pagination_sorting_and_detail(client, engineer_headers, 
 
 def test_filters_by_batch_inspector_and_date_range(client, engineer_headers, png_bytes):
     analysis = request_prediction(client, engineer_headers, png_bytes, "BATCH-002").json()
-    created = submit(client, engineer_headers, analysis["analysis_id"], "Dent").json()
+    created = finalize(client, engineer_headers, analysis["inspection_id"], "Dent").json()
     result = client.get(
-        "/api/v1/inspections",
+        "/api/v1/inspections/list",
         params={
             "batch_id": "BATCH-002",
             "inspector_id": "1",
@@ -220,15 +220,19 @@ def test_filters_by_batch_inspector_and_date_range(client, engineer_headers, png
 
 
 def test_invalid_pagination_sorting_and_date_range_are_rejected(client, engineer_headers):
-    assert client.get("/api/v1/inspections?page=0", headers=engineer_headers).status_code == 422
     assert (
-        client.get("/api/v1/inspections?sort_by=comments", headers=engineer_headers).status_code
+        client.get("/api/v1/inspections/list?page=0", headers=engineer_headers).status_code == 422
+    )
+    assert (
+        client.get(
+            "/api/v1/inspections/list?sort_by=comments", headers=engineer_headers
+        ).status_code
         == 422
     )
     later = datetime.now(UTC)
     earlier = later - timedelta(days=1)
     response = client.get(
-        "/api/v1/inspections",
+        "/api/v1/inspections/list",
         params={"date_from": later.isoformat(), "date_to": earlier.isoformat()},
         headers=engineer_headers,
     )
@@ -238,7 +242,7 @@ def test_invalid_pagination_sorting_and_date_range_are_rejected(client, engineer
 
 def test_supervisor_can_read_dashboard_and_history(client):
     headers = {"X-User-Id": "2"}
-    assert client.get("/api/v1/inspections", headers=headers).status_code == 200
+    assert client.get("/api/v1/inspections/list", headers=headers).status_code == 200
     response = client.get("/api/v1/dashboard/summary", headers=headers)
     assert response.status_code == 200
     assert response.json() == {
@@ -246,6 +250,8 @@ def test_supervisor_can_read_dashboard_and_history(client):
         "passed_inspections": 0,
         "rejected_inspections": 0,
         "defect_rate": 0.0,
+        "ai_accepted_count": 0,
+        "ai_overridden_count": 0,
         "ai_acceptance_rate": 0.0,
         "defect_breakdown": [{"defect_type": kind.value, "count": 0} for kind in DefectType],
     }
@@ -258,14 +264,18 @@ def test_dashboard_uses_final_type_and_acceptance_includes_no_defect(
     provider.analyze = async_fixed_no_defect  # type: ignore[method-assign]
     first = request_prediction(client, engineer_headers, png_bytes).json()
     second = request_prediction(client, engineer_headers, png_bytes).json()
-    assert submit(client, engineer_headers, first["analysis_id"], "No Defect").status_code == 201
-    assert submit(client, engineer_headers, second["analysis_id"], "Dent").status_code == 201
+    assert (
+        finalize(client, engineer_headers, first["inspection_id"], "No Defect").status_code == 200
+    )
+    assert finalize(client, engineer_headers, second["inspection_id"], "Dent").status_code == 200
 
     summary = client.get("/api/v1/dashboard/summary", headers=engineer_headers).json()
     assert summary["total_inspections"] == 2
     assert summary["passed_inspections"] == 1
     assert summary["rejected_inspections"] == 1
     assert summary["defect_rate"] == 50.0
+    assert summary["ai_accepted_count"] == 1
+    assert summary["ai_overridden_count"] == 1
     assert summary["ai_acceptance_rate"] == 50.0
     assert {item["defect_type"]: item["count"] for item in summary["defect_breakdown"]}["Dent"] == 1
 
@@ -299,7 +309,7 @@ def test_invalid_ai_responses_are_rejected_without_fallback(
     response = request_prediction(client, engineer_headers, png_bytes)
     assert response.status_code == 502
     assert response.json()["error"]["code"] == "invalid_ai_response"
-    assert client.get("/api/v1/inspections", headers=engineer_headers).json()["total"] == 0
+    assert client.get("/api/v1/inspections/list", headers=engineer_headers).json()["total"] == 0
 
 
 def test_ai_timeout_and_rate_limit_return_useful_errors(client, engineer_headers, png_bytes):
@@ -420,7 +430,8 @@ def test_openapi_contains_phase_two_routes(client):
         "/api/v1/users",
         "/api/v1/batches",
         "/api/v1/ai/predict",
-        "/api/v1/inspections",
+        "/api/v1/inspections/list",
+        "/api/v1/finalize-inspection",
         "/api/v1/inspections/{inspection_id}",
         "/api/v1/dashboard/summary",
     ):

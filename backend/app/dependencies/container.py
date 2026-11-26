@@ -109,8 +109,8 @@ def build_container(settings: Settings) -> AppContainer:
         raise RuntimeError("APP_MODE must be either 'mock' or 'database'.")
     users = MockUserRepository()
     batches = MockBatchRepository()
-    inspections = MockInspectionRepository()
     analyses = MockPendingAnalysisRepository()
+    inspections = MockInspectionRepository(analyses)
     return AppContainer(
         settings=settings,
         user_repository=users,

@@ -1,7 +1,14 @@
 from datetime import datetime
 from typing import Protocol
 
-from app.models.domain import Batch, DefectType, Inspection, PendingAnalysis, User
+from app.models.domain import (
+    Batch,
+    DefectType,
+    Inspection,
+    InspectionStatus,
+    PendingAnalysis,
+    User,
+)
 
 
 class UserRepository(Protocol):
@@ -19,7 +26,7 @@ class BatchRepository(Protocol):
 class PendingAnalysisRepository(Protocol):
     def add(self, analysis: PendingAnalysis) -> None: ...
 
-    def get(self, analysis_id: str) -> PendingAnalysis | None: ...
+    def get(self, inspection_id: str) -> PendingAnalysis | None: ...
 
 
 class InspectionRepository(Protocol):
@@ -28,6 +35,7 @@ class InspectionRepository(Protocol):
     def list_page(
         self,
         *,
+        status: InspectionStatus,
         defect_type: DefectType | None,
         batch_id: str | None,
         inspector_id: str | None,
@@ -37,7 +45,7 @@ class InspectionRepository(Protocol):
         page_size: int,
         sort_by: str,
         sort_order: str,
-    ) -> tuple[list[Inspection], int]: ...
+    ) -> tuple[list[Inspection | PendingAnalysis], int]: ...
 
     def dashboard_counts(self) -> dict[DefectType, int]: ...
 
@@ -45,4 +53,4 @@ class InspectionRepository(Protocol):
 
 
 class InspectionSubmissionRepository(Protocol):
-    def submit_pending(self, analysis_id: str, inspection: Inspection) -> bool: ...
+    def submit_pending(self, inspection_id: str, inspection: Inspection) -> bool: ...

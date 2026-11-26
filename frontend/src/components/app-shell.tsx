@@ -1,24 +1,21 @@
 import {
   Activity,
+  Check,
+  ChevronDown,
   ClipboardCheck,
   LayoutDashboard,
   Plus,
   ShieldCheck,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
+import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { useDemoUser } from "@/app/demo-user-context";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { QueryError } from "@/components/query-states";
 import { useUsers } from "@/services/queries";
-import { cn } from "@/lib/utils";
 
 const navigation = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -36,10 +33,8 @@ export function AppShell() {
   const currentUser = usersQuery.data?.find(
     (user) => user.user_id === demoUserId,
   );
-  const roleLabel =
-    currentUser?.role === "QUALITY_ENGINEER"
-      ? "Quality Engineer"
-      : "Production Supervisor";
+  const roleLabel = (role: string) =>
+    role === "QUALITY_ENGINEER" ? "Quality Engineer" : "Production Supervisor";
 
   return (
     <div className="min-h-screen bg-muted/40 text-foreground">
@@ -49,9 +44,9 @@ export function AppShell() {
             <Activity className="size-5" aria-hidden="true" />
           </div>
           <div>
-            <p className="font-semibold leading-tight">Inspectra</p>
-            <p className="text-xs text-muted-foreground">
-              Manufacturing quality
+            <p className="font-semibold leading-tight">Quality Inspector</p>
+            <p className="whitespace-nowrap text-[11px] text-muted-foreground">
+              AI-assisted · human-confirmed
             </p>
           </div>
         </div>
@@ -110,58 +105,80 @@ export function AppShell() {
 
       <div className="lg:pl-64">
         <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="mx-auto flex min-h-[76px] max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-7">
+          <div className="mx-auto flex min-h-[76px] max-w-[1500px] items-center justify-between gap-4 px-6">
             <div className="flex items-center gap-3 lg:hidden">
               <div className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
                 <Activity className="size-4" aria-hidden="true" />
               </div>
-              <span className="font-semibold">Inspectra</span>
-            </div>
-            <div className="hidden lg:block">
-              <p className="text-sm font-medium">Quality operations</p>
-              <p className="text-xs text-muted-foreground">
-                AI-assisted · human-confirmed
-              </p>
+              <span className="font-semibold">Quality Inspector</span>
             </div>
             <div className="ml-auto flex items-center gap-3">
-              <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium">
-                  {currentUser?.name ?? "Loading user"}
-                </p>
-                {currentUser && (
-                  <p className="text-xs text-muted-foreground">{roleLabel}</p>
-                )}
-              </div>
-              <Select
-                value={demoUserId}
-                onValueChange={setDemoUserId}
-                disabled={usersQuery.isPending || usersQuery.isError}
-              >
-                <SelectTrigger
-                  className="w-[148px] sm:w-[190px]"
-                  aria-label="Select demo user"
-                >
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  {usersQuery.data?.map((user) => (
-                    <SelectItem key={user.user_id} value={user.user_id}>
-                      {user.name} ·{" "}
-                      {user.role === "QUALITY_ENGINEER"
-                        ? "Engineer"
-                        : "Supervisor"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               {currentUser && (
-                <Badge variant="outline" className="hidden md:inline-flex">
-                  {roleLabel}
-                </Badge>
+                <Badge variant="outline">{roleLabel(currentUser.role)}</Badge>
               )}
+              <DropdownMenuPrimitive.Root>
+                <DropdownMenuPrimitive.Trigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 rounded-full pl-1.5 pr-2"
+                    disabled={usersQuery.isPending || usersQuery.isError}
+                    aria-label={`User menu${currentUser ? ` for ${currentUser.name}` : ""}`}
+                  >
+                    <span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                      {currentUser?.name.charAt(0).toUpperCase() ?? "?"}
+                    </span>
+                    <ChevronDown
+                      className="size-4 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  </Button>
+                </DropdownMenuPrimitive.Trigger>
+                <DropdownMenuPrimitive.Portal>
+                  <DropdownMenuPrimitive.Content
+                    align="end"
+                    sideOffset={8}
+                    className="z-50 min-w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
+                  >
+                    {currentUser && (
+                      <div className="px-3 py-2">
+                        <p className="text-sm font-medium">
+                          {currentUser.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {roleLabel(currentUser.role)}
+                        </p>
+                      </div>
+                    )}
+                    <DropdownMenuPrimitive.Separator className="my-1 h-px bg-border" />
+                    <DropdownMenuPrimitive.Label className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                      Switch user
+                    </DropdownMenuPrimitive.Label>
+                    {usersQuery.data?.map((user) => (
+                      <DropdownMenuPrimitive.Item
+                        key={user.user_id}
+                        onSelect={() => setDemoUserId(user.user_id)}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground"
+                      >
+                        <span className="grid size-6 place-items-center rounded-full bg-muted text-xs font-medium">
+                          {user.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="flex-1">{user.name}</span>
+                        {user.user_id === demoUserId && (
+                          <Check
+                            className="size-4 text-primary"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </DropdownMenuPrimitive.Item>
+                    ))}
+                  </DropdownMenuPrimitive.Content>
+                </DropdownMenuPrimitive.Portal>
+              </DropdownMenuPrimitive.Root>
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto border-t px-4 py-2 lg:hidden">
+          <div className="flex gap-2 overflow-x-auto border-t px-6 py-2 lg:hidden">
             {navigation.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
@@ -196,7 +213,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1500px] px-4 py-7 sm:px-7 lg:py-9">
+        <main className="mx-auto max-w-[1500px] px-6 py-6">
           {usersQuery.isError ? (
             <QueryError
               message={usersQuery.error.message}
@@ -206,9 +223,6 @@ export function AppShell() {
             <Outlet />
           )}
         </main>
-        <footer className="px-4 pb-6 text-center text-xs text-muted-foreground sm:px-7">
-          Inspectra · Demo user selection is not production authentication
-        </footer>
       </div>
     </div>
   );

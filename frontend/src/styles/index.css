@@ -40,29 +40,29 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   color-scheme: light;
-  --background: oklch(0.985 0.006 155);
-  --foreground: oklch(0.2 0.018 160);
+  --background: oklch(0.985 0.006 180);
+  --foreground: oklch(0.2 0.018 180);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.018 160);
+  --card-foreground: oklch(0.2 0.018 180);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.2 0.018 160);
-  --primary: oklch(0.43 0.09 160);
-  --primary-foreground: oklch(0.99 0.004 155);
-  --secondary: oklch(0.95 0.015 155);
-  --secondary-foreground: oklch(0.27 0.025 160);
-  --muted: oklch(0.955 0.01 155);
-  --muted-foreground: oklch(0.51 0.018 160);
-  --accent: oklch(0.93 0.025 155);
-  --accent-foreground: oklch(0.27 0.025 160);
+  --primary: #097969;
+  --primary-foreground: #ffffff;
+  --secondary: oklch(0.95 0.015 180);
+  --secondary-foreground: oklch(0.27 0.025 180);
+  --muted: oklch(0.955 0.01 180);
+  --muted-foreground: oklch(0.51 0.018 180);
+  --accent: oklch(0.93 0.025 180);
+  --accent-foreground: oklch(0.27 0.025 180);
   --destructive: oklch(0.56 0.21 27);
-  --border: oklch(0.9 0.012 155);
-  --input: oklch(0.9 0.012 155);
-  --ring: oklch(0.56 0.09 160);
-  --chart-1: oklch(0.48 0.11 160);
+  --border: oklch(0.9 0.012 180);
+  --input: oklch(0.9 0.012 180);
+  --ring: #097969;
+  --chart-1: #097969;
   --chart-2: oklch(0.61 0.12 215);
   --chart-3: oklch(0.71 0.14 75);
   --chart-4: oklch(0.61 0.16 35);
-  --chart-5: oklch(0.54 0.12 290);
+  --chart-5: oklch(0.58 0.16 345);
   --radius: 0.75rem;
 }
 
@@ -94,7 +94,39 @@ button:disabled {
   cursor: not-allowed;
 }
 
+@keyframes sparkle-glimmer {
+  0%,
+  100% {
+    color: #097969;
+    filter: drop-shadow(0 0 1px currentColor);
+    transform: scale(1) rotate(-4deg);
+  }
+  33% {
+    color: #8b5cf6;
+    filter: drop-shadow(0 0 5px currentColor);
+    transform: scale(1.14) rotate(4deg);
+  }
+  66% {
+    color: #f59e0b;
+    filter: drop-shadow(0 0 4px currentColor);
+    transform: scale(1.08) rotate(-2deg);
+  }
+}
+
+.sparkle-icon {
+  animation: sparkle-glimmer 2.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sparkle-icon {
+    animation: none;
+    color: var(--primary);
+    filter: none;
+  }
+}
+
 ::selection {
-  background: oklch(0.87 0.06 160);
-  color: oklch(0.18 0.02 160);
+  background: #b2dfdb;
+  color: #004d40;
 }

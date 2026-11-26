@@ -31,7 +31,7 @@ export interface Prediction {
 }
 
 export interface AIAnalysis {
-  analysis_id: string;
+  inspection_id: string;
   status: InspectionStatus;
   batch_id: string;
   image_url: string;
@@ -53,10 +53,10 @@ export interface Inspection {
   ai_confidence: number;
   ai_provider: string;
   ai_model: string;
-  final_defect_type: DefectType;
-  was_overridden: boolean;
+  final_defect_type: DefectType | null;
+  was_overridden: boolean | null;
   comments: string | null;
-  inspected_at: string;
+  inspected_at: string | null;
 }
 
 export interface InspectionPage {
@@ -77,11 +77,14 @@ export interface DashboardSummary {
   passed_inspections: number;
   rejected_inspections: number;
   defect_rate: number;
+  ai_accepted_count: number;
+  ai_overridden_count: number;
   ai_acceptance_rate: number;
   defect_breakdown: DefectCount[];
 }
 
 export interface InspectionFilters {
+  status?: InspectionStatus;
   defect_type?: DefectType;
   batch_id?: string;
   inspector_id?: string;
@@ -93,8 +96,8 @@ export interface InspectionFilters {
   sort_order?: "asc" | "desc";
 }
 
-export interface InspectionSubmission {
-  analysis_id: string;
+export interface FinalizeInspectionRequest {
+  inspection_id: string;
   final_defect_type: DefectType;
   comments?: string;
 }

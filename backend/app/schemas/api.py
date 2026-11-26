@@ -30,7 +30,7 @@ class PredictionResponse(BaseModel):
 
 
 class AIResponse(BaseModel):
-    analysis_id: str
+    inspection_id: str
     status: InspectionStatus
     batch_id: str
     image_url: str
@@ -38,10 +38,10 @@ class AIResponse(BaseModel):
     created_at: datetime
 
 
-class InspectionCreate(BaseModel):
+class InspectionFinalizeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    analysis_id: str = Field(min_length=1, max_length=64)
+    inspection_id: str = Field(min_length=1, max_length=64)
     final_defect_type: DefectType
     comments: str | None = Field(default=None, max_length=2000)
 
@@ -60,10 +60,10 @@ class InspectionResponse(BaseModel):
     ai_confidence: float
     ai_provider: str
     ai_model: str
-    final_defect_type: DefectType
-    was_overridden: bool
+    final_defect_type: DefectType | None
+    was_overridden: bool | None
     comments: str | None
-    inspected_at: datetime
+    inspected_at: datetime | None
 
 
 class InspectionPage(BaseModel):
@@ -84,5 +84,7 @@ class DashboardSummary(BaseModel):
     passed_inspections: int
     rejected_inspections: int
     defect_rate: float
+    ai_accepted_count: int
+    ai_overridden_count: int
     ai_acceptance_rate: float
     defect_breakdown: list[DefectCount]

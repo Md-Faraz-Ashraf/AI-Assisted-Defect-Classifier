@@ -23,7 +23,7 @@ describe("typed API client", () => {
     });
 
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("/inspections?");
+    expect(url).toContain("/inspections/list?");
     expect(url).toContain("defect_type=Dent");
     expect(options.headers).toBeInstanceOf(Headers);
     expect((options.headers as Headers).get("X-User-Id")).toBe("2");
@@ -33,7 +33,7 @@ describe("typed API client", () => {
   it("sends image prediction as multipart form data without a JSON content type", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       Response.json({
-        analysis_id: "a1",
+        inspection_id: "a1",
         batch_id: "b1",
         image_url: "/image",
         prediction: {},

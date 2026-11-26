@@ -18,6 +18,8 @@ class DashboardService:
             passed_inspections=passed,
             rejected_inspections=rejected,
             defect_rate=round(rejected / total * 100, 2) if total else 0,
+            ai_accepted_count=accepted,
+            ai_overridden_count=total - accepted,
             ai_acceptance_rate=round(accepted / total * 100, 2) if total else 0,
             defect_breakdown=[
                 DefectCount(defect_type=kind, count=counts[kind]) for kind in DefectType

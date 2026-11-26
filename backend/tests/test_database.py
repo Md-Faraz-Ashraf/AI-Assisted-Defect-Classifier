@@ -14,7 +14,13 @@ from app.core.config import Settings
 from app.db.base import Base
 from app.db.models import BatchRow, InspectionRow, UserRow
 from app.db.session import make_engine, make_session_factory
-from app.models.domain import DefectType, Inspection, PendingAnalysis, Prediction
+from app.models.domain import (
+    DefectType,
+    Inspection,
+    InspectionStatus,
+    PendingAnalysis,
+    Prediction,
+)
 from app.repositories.postgres import (
     PostgresBatchRepository,
     PostgresInspectionLifecycleRepository,
@@ -54,9 +60,9 @@ def database():
     database_path.unlink(missing_ok=True)
 
 
-def make_analysis(analysis_id: str | None = None) -> PendingAnalysis:
+def make_analysis(inspection_id: str | None = None) -> PendingAnalysis:
     return PendingAnalysis(
-        inspection_id=analysis_id or str(uuid4()),
+        inspection_id=inspection_id or str(uuid4()),
         batch_id="BATCH-001",
         inspector_id="1",
         image_ref="generated.png",
@@ -101,6 +107,7 @@ def test_database_repositories_round_trip_filter_and_aggregate(database):
     assert analyses.get(pending.inspection_id).submitted is True
     assert inspections.get(record.inspection_id).original_ai_prediction == DefectType.SCRATCH
     rows, total = inspections.list_page(
+        status=InspectionStatus.REVIEWED,
         defect_type=DefectType.DENT,
         batch_id="BATCH-001",
         inspector_id="1",

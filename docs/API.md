@@ -21,8 +21,8 @@ Missing or unknown selection returns `401`; forbidden mutations return `403`.
 | `GET /users` | No | Seeded users, including `user_id`, for user selection |
 | `GET /batches` | Yes | Seeded manufacturing batches, including `batch_id` |
 | `POST /ai/predict` | Quality Engineer | Validate/store image, request a prediction, create an `UNREVIEWED` inspection record |
-| `POST /inspections` | Quality Engineer | Transition the existing record to `REVIEWED` with the human decision |
-| `GET /inspections` | Yes | Filtered, sorted, paginated inspection history |
+| `POST /finalize-inspection` | Quality Engineer | Finalize an existing unreviewed inspection with the human decision |
+| `GET /inspections/list` | Yes | Filtered, sorted, paginated inspection history |
 | `GET /inspections/{inspection_id}` | Yes | Inspection detail, including `inspection_id` |
 | `GET /dashboard/summary` | Yes | Server-calculated quality metrics |
 | `GET /images/{image_ref}` | Yes | Serve an image by its generated reference |
@@ -33,7 +33,7 @@ Missing or unknown selection returns `401`; forbidden mutations return `403`.
 
 ```json
 {
-  "analysis_id": "a server-generated identifier",
+  "inspection_id": "a server-generated identifier",
   "status": "UNREVIEWED",
   "batch_id": "BATCH-001",
   "image_url": "/api/v1/images/a-generated-reference.png",
@@ -47,7 +47,7 @@ Missing or unknown selection returns `401`; forbidden mutations return `403`.
 }
 ```
 
-The API's `analysis_id` contains the value of the row's `inspection_id` primary key. In PostgreSQL mode it is created in `inspections` with status `UNREVIEWED`; a successful submission updates that same row to `REVIEWED`. No second analysis/inspection row is created.
+The returned `inspection_id` is the primary key of the inspection row. In PostgreSQL mode it is created in `inspections` with status `UNREVIEWED`; finalization updates that same row to `REVIEWED`. No second row is created.
 
 The mock provider is deterministic for the same image. Its confidence is an indicative model-reported score, not a calibrated probability. It is not a real AI analysis. A failed provider response never becomes `No Defect`.
 
@@ -100,15 +100,15 @@ The provider's raw response is text, expected to contain JSON like:
 {"defect_type":"Scratch","confidence":0.82}
 ```
 
-The backend parses this text with `ProviderPrediction`: extra fields are rejected, `defect_type` must be one of the five `DefectType` values, and `confidence` must be a strict number between 0 and 1. Invalid or missing output fails the request; it is not converted into a successful prediction. Gemini does **not** return `analysis_id`: after validation, the backend generates the inspection UUID, saves the image, creates an `UNREVIEWED` record, and returns the browser-facing `/ai/predict` response shown above.
+The backend parses this text with `ProviderPrediction`: extra fields are rejected, `defect_type` must be one of the five `DefectType` values, and `confidence` must be a strict number between 0 and 1. Invalid or missing output fails the request; it is not converted into a successful prediction. Gemini does **not** return `inspection_id`: after validation, the backend generates the inspection UUID, saves the image, creates an `UNREVIEWED` record, and returns the browser-facing `/ai/predict` response shown above.
 
-## Submit the human decision
+## Finalize the inspection
 
-`POST /api/v1/inspections` accepts JSON. The browser submits only the unreviewed analysis ID, final defect, and optional comment; AI output, confidence, role, and override status are loaded or calculated by the server.
+`POST /api/v1/finalize-inspection` accepts JSON. It finalizes the existing unreviewed inspection; it does not create another inspection. The browser submits its `inspection_id`, the final defect, and an optional comment. AI output, confidence, role, and override status are loaded or calculated by the server. A successful request returns `200`.
 
 ```json
 {
-  "analysis_id": "the id returned by /ai/predict",
+  "inspection_id": "the id returned by /ai/predict",
   "final_defect_type": "Dent",
   "comments": "Reviewed under inspection lighting."
 }
@@ -118,8 +118,9 @@ The server verifies the record owner, batch, and image; prevents resubmission; p
 
 ## History filters and pagination
 
-`GET /api/v1/inspections` accepts:
+`GET /api/v1/inspections/list` accepts:
 
+- `status`: `REVIEWED` or `UNREVIEWED`; defaults to `REVIEWED` to show completed inspections.
 - `defect_type`: one of the five supported categories (filters on final human classification).
 - `batch_id`, `inspector_id`.
 - `date_from`, `date_to`: ISO 8601 timestamps; timestamps without an offset are treated as UTC.
@@ -127,7 +128,7 @@ The server verifies the record owner, batch, and image; prevents resubmission; p
 - `sort_by`: `inspected_at`, `batch_id`, `final_defect_type`, or `inspector_id`.
 - `sort_order`: `asc` or `desc` (default `desc`).
 
-The response contains `items`, `page`, `page_size`, `total`, and `total_pages`. Ordering includes `inspection_id` as a stable tie-breaker.
+For `UNREVIEWED`, `defect_type` filters on the AI prediction, date filters and `inspected_at` sorting use the analysis creation time, and final decision fields (`final_defect_type`, `was_overridden`, `comments`, `inspected_at`) are `null`. The response contains `items`, `page`, `page_size`, `total`, and `total_pages`. Ordering includes `inspection_id` as a stable tie-breaker.
 
 ## Dashboard definitions
 
@@ -135,6 +136,7 @@ The response contains `items`, `page`, `page_size`, `total`, and `total_pages`. 
 - Rejected: all other final classifications.
 - Defect rate: `rejected / total * 100`.
 - AI acceptance rate: count of `was_overridden = false` divided by total. This includes accepted `No Defect` predictions.
+- `ai_accepted_count` and `ai_overridden_count` report the counts used for that rate; the formula is `accepted / (accepted + overridden) * 100`.
 - Breakdown counts group by final human-confirmed category.
 - With no inspections, both percentages return zero.
 
@@ -155,8 +157,8 @@ Request validation errors return HTTP `422` with an `error` object and field det
 3. Run `GET /users` and `GET /health`.
 4. Run `GET /batches` with `X-User-Id: 1`.
 5. Run `POST /ai/predict` with `batch_id=BATCH-001` and a local JPEG, PNG, or WebP file.
-6. Copy `analysis_id`; submit it through `POST /inspections` with `final_defect_type` equal to or different from the AI result.
-7. Verify `GET /inspections`, detail, image URL, and `GET /dashboard/summary`.
+6. Copy `inspection_id`; finalize it through `POST /finalize-inspection` with `final_defect_type` equal to or different from the AI result.
+7. Verify `GET /inspections/list`, detail, image URL, and `GET /dashboard/summary`.
 8. Repeat protected reads as Rahul and confirm prediction/submission return `403`.
 
 ## PowerShell `curl.exe` example
@@ -168,12 +170,12 @@ curl.exe -H "X-User-Id: 1" http://127.0.0.1:8000/api/v1/batches
 curl.exe -H "X-User-Id: 1" -F "batch_id=BATCH-001" -F "image=@C:\temp\product.png;type=image/png" http://127.0.0.1:8000/api/v1/ai/predict
 ```
 
-Copy `analysis_id` from the prediction response and submit it (replace the example ID). In database mode, this ID identifies the `UNREVIEWED` row and is transitioned to `REVIEWED` on successful submission:
+Copy `inspection_id` from the prediction response and use it in the finalization request (replace the example ID). In database mode, it identifies the `UNREVIEWED` row that is updated to `REVIEWED`:
 
 ```powershell
-curl.exe -H "X-User-Id: 1" -H "Content-Type: application/json" -d '{"analysis_id":"REPLACE_WITH_ANALYSIS_ID","final_defect_type":"No Defect","comments":"Reviewed manually."}' http://127.0.0.1:8000/api/v1/inspections
+curl.exe -H "X-User-Id: 1" -H "Content-Type: application/json" -d '{"inspection_id":"REPLACE_WITH_INSPECTION_ID","final_defect_type":"No Defect","comments":"Reviewed manually."}' http://127.0.0.1:8000/api/v1/finalize-inspection
 curl.exe -H "X-User-Id: 2" http://127.0.0.1:8000/api/v1/dashboard/summary
-curl.exe -H "X-User-Id: 2" "http://127.0.0.1:8000/api/v1/inspections?page=1&page_size=10"
+curl.exe -H "X-User-Id: 2" "http://127.0.0.1:8000/api/v1/inspections/list?page=1&page_size=10"
 ```
 
 ## Current implementation limits

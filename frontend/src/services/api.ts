@@ -5,7 +5,7 @@ import type {
   DemoUser,
   InspectionFilters,
   InspectionPage,
-  InspectionSubmission,
+  FinalizeInspectionRequest,
 } from "@/types/api";
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
@@ -96,7 +96,7 @@ export const api = {
       if (value !== undefined && value !== "") params.set(key, String(value));
     });
     return request<InspectionPage>(
-      `/inspections?${params.toString()}`,
+      `/inspections/list?${params.toString()}`,
       { signal },
       demoUserId,
     );
@@ -118,13 +118,13 @@ export const api = {
     );
   },
 
-  submitInspection(
+  finalizeInspection(
     demoUserId: string,
-    submission: InspectionSubmission,
+    submission: FinalizeInspectionRequest,
     signal?: AbortSignal,
   ): Promise<import("@/types/api").Inspection> {
     return request<import("@/types/api").Inspection>(
-      "/inspections",
+      "/finalize-inspection",
       { method: "POST", body: JSON.stringify(submission), signal },
       demoUserId,
     );

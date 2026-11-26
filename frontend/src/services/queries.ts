@@ -26,10 +26,18 @@ export function useDashboard(demoUserId: string) {
   });
 }
 
-export function useInspections(demoUserId: string, filters: InspectionFilters) {
+export function useInspections(
+  demoUserId: string,
+  filters: InspectionFilters,
+  keepPreviousUserResults = false,
+) {
   return useQuery({
     queryKey: queryKeys.inspections(demoUserId, filters),
     queryFn: ({ signal }) => api.listInspections(demoUserId, filters, signal),
     enabled: Boolean(demoUserId),
+    placeholderData: keepPreviousUserResults
+      ? (previousData, previousQuery) =>
+          previousQuery?.queryKey[1] === demoUserId ? previousData : undefined
+      : undefined,
   });
 }
