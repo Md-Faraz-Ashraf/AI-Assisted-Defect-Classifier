@@ -9,7 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { useDemoUser } from "@/app/demo-user-context";
+import { useLoggedInUser } from "@/app/logged-in-user-context";
 import { EmptyState, PageLoading, QueryError } from "@/components/query-states";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -64,8 +64,8 @@ function MetricCard({
 }
 
 export function DashboardPage() {
-  const { demoUserId } = useDemoUser();
-  const dashboardQuery = useDashboard(demoUserId);
+  const { loggedInUserId } = useLoggedInUser();
+  const dashboardQuery = useDashboard(loggedInUserId);
   const recentFilters = useMemo(
     () => ({
       page: 1,
@@ -75,7 +75,7 @@ export function DashboardPage() {
     }),
     [],
   );
-  const recentQuery = useInspections(demoUserId, recentFilters);
+  const recentQuery = useInspections(loggedInUserId, recentFilters);
 
   if (dashboardQuery.isPending || recentQuery.isPending) {
     return (
@@ -306,7 +306,7 @@ export function DashboardPage() {
           ) : (
             <InspectionTable
               inspections={recent}
-              demoUserId={demoUserId}
+              loggedInUserId={loggedInUserId}
               compact
             />
           )}

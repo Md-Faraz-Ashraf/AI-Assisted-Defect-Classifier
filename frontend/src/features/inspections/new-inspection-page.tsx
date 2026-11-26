@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useDemoUser } from "@/app/demo-user-context";
+import { useLoggedInUser } from "@/app/logged-in-user-context";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,7 +89,7 @@ type AnalysisValues = z.infer<typeof analysisSchema>;
 type DecisionValues = z.infer<typeof decisionSchema>;
 
 export function NewInspectionPage() {
-  const { demoUserId } = useDemoUser();
+  const { loggedInUserId } = useLoggedInUser();
   const navigate = useNavigate();
   const location = useLocation();
   const reviewInspection = (
@@ -112,7 +112,7 @@ export function NewInspectionPage() {
         }
       : null;
   const queryClient = useQueryClient();
-  const batchesQuery = useBatches(demoUserId);
+  const batchesQuery = useBatches(loggedInUserId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(initialAnalysis);
   const [formError, setFormError] = useState<string>();
@@ -148,7 +148,7 @@ export function NewInspectionPage() {
 
   const analyzeMutation = useMutation({
     mutationFn: ({ batchId, image }: { batchId: string; image: File }) =>
-      api.predict(demoUserId, batchId, image),
+      api.predict(loggedInUserId, batchId, image),
     onSuccess: (prediction) => {
       setAnalysis(prediction);
       setFormError(undefined);
@@ -169,7 +169,7 @@ export function NewInspectionPage() {
       if (!analysis || !values.final_defect_type) {
         throw new Error("Choose a final defect category before submitting.");
       }
-      return api.finalizeInspection(demoUserId, {
+      return api.finalizeInspection(loggedInUserId, {
         inspection_id: analysis.inspection_id,
         final_defect_type: values.final_defect_type,
         ...(values.comments.trim() ? { comments: values.comments.trim() } : {}),
@@ -178,10 +178,10 @@ export function NewInspectionPage() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: queryKeys.dashboard(demoUserId),
+          queryKey: queryKeys.dashboard(loggedInUserId),
         }),
         queryClient.invalidateQueries({
-          queryKey: ["inspections", demoUserId],
+          queryKey: ["inspections", loggedInUserId],
         }),
       ]);
       toast.success("Inspection submitted", {
@@ -362,7 +362,7 @@ export function NewInspectionPage() {
                     {reviewInspection?.status === "UNREVIEWED" ? (
                       <ProtectedImage
                         imageRef={reviewInspection.image_ref}
-                        demoUserId={demoUserId}
+                        loggedInUserId={loggedInUserId}
                         alt={`Product image for ${reviewInspection.batch_number}`}
                         className="max-h-64 w-full"
                       />

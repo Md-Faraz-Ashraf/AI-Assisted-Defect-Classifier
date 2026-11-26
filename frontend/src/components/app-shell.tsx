@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Activity,
   Check,
@@ -9,7 +10,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
-import { useDemoUser } from "@/app/demo-user-context";
+import { useLoggedInUser } from "@/app/logged-in-user-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -28,10 +29,20 @@ const navigation = [
 ];
 
 export function AppShell() {
-  const { demoUserId, setDemoUserId } = useDemoUser();
+  const { loggedInUserId, setLoggedInUserId } = useLoggedInUser();
   const usersQuery = useUsers();
+  useEffect(() => {
+    const users = usersQuery.data;
+    const firstUser = users?.[0];
+    if (!firstUser) return;
+
+    const hasCurrentUser = users.some(
+      (user) => user.user_id === loggedInUserId,
+    );
+    if (!hasCurrentUser) setLoggedInUserId(firstUser.user_id);
+  }, [loggedInUserId, setLoggedInUserId, usersQuery.data]);
   const currentUser = usersQuery.data?.find(
-    (user) => user.user_id === demoUserId,
+    (user) => user.user_id === loggedInUserId,
   );
   const roleLabel = (role: string) =>
     role === "QUALITY_ENGINEER" ? "Quality Engineer" : "Production Supervisor";
@@ -158,14 +169,14 @@ export function AppShell() {
                     {usersQuery.data?.map((user) => (
                       <DropdownMenuPrimitive.Item
                         key={user.user_id}
-                        onSelect={() => setDemoUserId(user.user_id)}
+                        onSelect={() => setLoggedInUserId(user.user_id)}
                         className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground"
                       >
                         <span className="grid size-6 place-items-center rounded-full bg-muted text-xs font-medium">
                           {user.name.charAt(0).toUpperCase()}
                         </span>
                         <span className="flex-1">{user.name}</span>
-                        {user.user_id === demoUserId && (
+                        {user.user_id === loggedInUserId && (
                           <Check
                             className="size-4 text-primary"
                             aria-hidden="true"

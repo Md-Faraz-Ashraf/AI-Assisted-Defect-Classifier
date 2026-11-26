@@ -1,13 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { DemoUserProvider } from "@/app/demo-user-context";
+import { LoggedInUserProvider } from "@/app/logged-in-user-context";
 
 export function AppProviders({
   children,
-  initialUserId,
+  initialLoggedInUserId,
 }: {
   children: ReactNode;
-  initialUserId?: string;
+  initialLoggedInUserId?: string;
 }) {
   const [queryClient] = useState(
     () =>
@@ -20,9 +20,9 @@ export function AppProviders({
   );
   return (
     <QueryClientProvider client={queryClient}>
-      <DemoUserProvider initialUserId={initialUserId}>
+      <LoggedInUserProvider initialLoggedInUserId={initialLoggedInUserId}>
         {children}
-      </DemoUserProvider>
+      </LoggedInUserProvider>
     </QueryClientProvider>
   );
 }

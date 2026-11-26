@@ -4,7 +4,7 @@ import { api, ApiError } from "./api";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("typed API client", () => {
-  it("sends the demo identity and serializes list filters", async () => {
+  it("sends the logged-in user identity and serializes list filters", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       Response.json({
         items: [],

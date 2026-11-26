@@ -2,7 +2,7 @@ import type {
   AIAnalysis,
   Batch,
   DashboardSummary,
-  DemoUser,
+  LoggedInUser,
   InspectionFilters,
   InspectionPage,
   FinalizeInspectionRequest,
@@ -51,10 +51,10 @@ async function parseError(response: Response): Promise<ApiError> {
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  demoUserId?: string,
+  loggedInUserId?: string,
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  if (demoUserId) headers.set("X-User-Id", demoUserId);
+  if (loggedInUserId) headers.set("X-User-Id", loggedInUserId);
   if (options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
@@ -67,27 +67,27 @@ async function request<T>(
 }
 
 export const api = {
-  listUsers(signal?: AbortSignal): Promise<DemoUser[]> {
-    return request<DemoUser[]>("/users", { signal });
+  listUsers(signal?: AbortSignal): Promise<LoggedInUser[]> {
+    return request<LoggedInUser[]>("/users", { signal });
   },
 
-  listBatches(demoUserId: string, signal?: AbortSignal): Promise<Batch[]> {
-    return request<Batch[]>("/batches", { signal }, demoUserId);
+  listBatches(loggedInUserId: string, signal?: AbortSignal): Promise<Batch[]> {
+    return request<Batch[]>("/batches", { signal }, loggedInUserId);
   },
 
   getDashboard(
-    demoUserId: string,
+    loggedInUserId: string,
     signal?: AbortSignal,
   ): Promise<DashboardSummary> {
     return request<DashboardSummary>(
       "/dashboard/summary",
       { signal },
-      demoUserId,
+      loggedInUserId,
     );
   },
 
   listInspections(
-    demoUserId: string,
+    loggedInUserId: string,
     filters: InspectionFilters,
     signal?: AbortSignal,
   ): Promise<InspectionPage> {
@@ -98,12 +98,12 @@ export const api = {
     return request<InspectionPage>(
       `/inspections/list?${params.toString()}`,
       { signal },
-      demoUserId,
+      loggedInUserId,
     );
   },
 
   predict(
-    demoUserId: string,
+    loggedInUserId: string,
     batchId: string,
     image: File,
     signal?: AbortSignal,
@@ -114,24 +114,24 @@ export const api = {
     return request<AIAnalysis>(
       "/ai/predict",
       { method: "POST", body: formData, signal },
-      demoUserId,
+      loggedInUserId,
     );
   },
 
   finalizeInspection(
-    demoUserId: string,
+    loggedInUserId: string,
     submission: FinalizeInspectionRequest,
     signal?: AbortSignal,
   ): Promise<import("@/types/api").Inspection> {
     return request<import("@/types/api").Inspection>(
       "/finalize-inspection",
       { method: "POST", body: JSON.stringify(submission), signal },
-      demoUserId,
+      loggedInUserId,
     );
   },
 
   async getImage(
-    demoUserId: string,
+    loggedInUserId: string,
     imageRef: string,
     signal?: AbortSignal,
   ): Promise<Blob> {
@@ -139,7 +139,7 @@ export const api = {
       `${API_BASE_URL}/images/${encodeURIComponent(imageRef)}`,
       {
         signal,
-        headers: { "X-User-Id": demoUserId },
+        headers: { "X-User-Id": loggedInUserId },
       },
     );
     if (!response.ok) throw await parseError(response);

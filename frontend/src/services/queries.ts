@@ -10,34 +10,37 @@ export function useUsers() {
   });
 }
 
-export function useBatches(demoUserId: string) {
+export function useBatches(loggedInUserId: string) {
   return useQuery({
-    queryKey: queryKeys.batches(demoUserId),
-    queryFn: ({ signal }) => api.listBatches(demoUserId, signal),
-    enabled: Boolean(demoUserId),
+    queryKey: queryKeys.batches(loggedInUserId),
+    queryFn: ({ signal }) => api.listBatches(loggedInUserId, signal),
+    enabled: Boolean(loggedInUserId),
   });
 }
 
-export function useDashboard(demoUserId: string) {
+export function useDashboard(loggedInUserId: string) {
   return useQuery({
-    queryKey: queryKeys.dashboard(demoUserId),
-    queryFn: ({ signal }) => api.getDashboard(demoUserId, signal),
-    enabled: Boolean(demoUserId),
+    queryKey: queryKeys.dashboard(loggedInUserId),
+    queryFn: ({ signal }) => api.getDashboard(loggedInUserId, signal),
+    enabled: Boolean(loggedInUserId),
   });
 }
 
 export function useInspections(
-  demoUserId: string,
+  loggedInUserId: string,
   filters: InspectionFilters,
   keepPreviousUserResults = false,
 ) {
   return useQuery({
-    queryKey: queryKeys.inspections(demoUserId, filters),
-    queryFn: ({ signal }) => api.listInspections(demoUserId, filters, signal),
-    enabled: Boolean(demoUserId),
+    queryKey: queryKeys.inspections(loggedInUserId, filters),
+    queryFn: ({ signal }) =>
+      api.listInspections(loggedInUserId, filters, signal),
+    enabled: Boolean(loggedInUserId),
     placeholderData: keepPreviousUserResults
       ? (previousData, previousQuery) =>
-          previousQuery?.queryKey[1] === demoUserId ? previousData : undefined
+          previousQuery?.queryKey[1] === loggedInUserId
+            ? previousData
+            : undefined
       : undefined,
   });
 }

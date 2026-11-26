@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, FilterX, LoaderCircle } from "lucide-react";
-import { useDemoUser } from "@/app/demo-user-context";
+import { useLoggedInUser } from "@/app/logged-in-user-context";
 import { EmptyState, PageLoading, QueryError } from "@/components/query-states";
 import { PageHeader } from "@/components/page-header";
 import { InspectionTable } from "@/features/inspections/components/inspection-table";
@@ -25,13 +25,13 @@ import {
 const PAGE_SIZE = 10;
 
 export function InspectionHistoryPage() {
-  const { demoUserId } = useDemoUser();
+  const { loggedInUserId } = useLoggedInUser();
   const navigate = useNavigate();
   const [defectFilter, setDefectFilter] = useState<DefectType | "">("");
   const [batchFilter, setBatchFilter] = useState("");
   const [status, setStatus] = useState<InspectionStatus>("REVIEWED");
   const [page, setPage] = useState(1);
-  const batchesQuery = useBatches(demoUserId);
+  const batchesQuery = useBatches(loggedInUserId);
   const filters = useMemo(
     () => ({
       defect_type: defectFilter || undefined,
@@ -44,7 +44,7 @@ export function InspectionHistoryPage() {
     }),
     [defectFilter, batchFilter, status, page],
   );
-  const inspectionsQuery = useInspections(demoUserId, filters, true);
+  const inspectionsQuery = useInspections(loggedInUserId, filters, true);
 
   if (batchesQuery.isPending || inspectionsQuery.isPending) {
     return <PageLoading label="Loading inspection history" />;
@@ -178,7 +178,7 @@ export function InspectionHistoryPage() {
           ) : (
             <InspectionTable
               inspections={result.items}
-              demoUserId={demoUserId}
+              loggedInUserId={loggedInUserId}
               onReview={(inspection: Inspection) =>
                 navigate("/new-inspection", {
                   state: { reviewInspection: inspection },

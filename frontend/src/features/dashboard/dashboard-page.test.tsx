@@ -3,8 +3,8 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { DashboardPage } from "./dashboard-page";
 
-vi.mock("@/app/demo-user-context", () => ({
-  useDemoUser: () => ({ demoUserId: "1" }),
+vi.mock("@/app/logged-in-user-context", () => ({
+  useLoggedInUser: () => ({ loggedInUserId: "1" }),
 }));
 vi.mock("@/services/queries", () => ({
   useDashboard: () => ({

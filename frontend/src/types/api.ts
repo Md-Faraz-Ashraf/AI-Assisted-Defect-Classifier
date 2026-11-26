@@ -10,7 +10,7 @@ export type DefectType = (typeof DEFECT_TYPES)[number];
 export type UserRole = "QUALITY_ENGINEER" | "PRODUCTION_SUPERVISOR";
 export type InspectionStatus = "UNREVIEWED" | "REVIEWED";
 
-export interface DemoUser {
+export interface LoggedInUser {
   user_id: string;
   name: string;
   role: UserRole;

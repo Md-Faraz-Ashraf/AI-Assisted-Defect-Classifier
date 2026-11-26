@@ -22,12 +22,12 @@ export function formatDate(value: string): string {
 
 export function InspectionTable({
   inspections,
-  demoUserId,
+  loggedInUserId,
   compact = false,
   onReview,
 }: {
   inspections: Inspection[];
-  demoUserId: string;
+  loggedInUserId: string;
   compact?: boolean;
   onReview?: (inspection: Inspection) => void;
 }) {
@@ -82,7 +82,7 @@ export function InspectionTable({
             <TableCell className={imageColumnWidth}>
               <ProtectedImage
                 imageRef={inspection.image_ref}
-                demoUserId={demoUserId}
+                loggedInUserId={loggedInUserId}
                 alt={`Product in ${inspection.batch_number}`}
                 className="h-12 w-16"
               />

@@ -6,18 +6,18 @@ import { useObjectUrl } from "@/hooks/use-object-url";
 
 export function ProtectedImage({
   imageRef,
-  demoUserId,
+  loggedInUserId,
   alt,
   className = "",
 }: {
   imageRef: string;
-  demoUserId: string;
+  loggedInUserId: string;
   alt: string;
   className?: string;
 }) {
   const imageQuery = useQuery({
-    queryKey: queryKeys.image(demoUserId, imageRef),
-    queryFn: ({ signal }) => api.getImage(demoUserId, imageRef, signal),
+    queryKey: queryKeys.image(loggedInUserId, imageRef),
+    queryFn: ({ signal }) => api.getImage(loggedInUserId, imageRef, signal),
     staleTime: Infinity,
   });
   const objectUrl = useObjectUrl(imageQuery.data);
