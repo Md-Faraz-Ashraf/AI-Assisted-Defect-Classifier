@@ -34,6 +34,7 @@ class GeminiAIProvider:
     """Gemini image classifier using Google's asynchronous GenerateContent API."""
 
     name = "gemini"
+    # The system prompt below is used ground the api response within the expectations
     classification_instructions = (
         "Inspect the uploaded manufactured product image using the product and batch context. "
         "Choose exactly one allowed defect category; do not invent categories. "

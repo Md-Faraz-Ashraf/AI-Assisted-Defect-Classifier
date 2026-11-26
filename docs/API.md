@@ -51,6 +51,57 @@ The API's `analysis_id` contains the value of the row's `inspection_id` primary 
 
 The mock provider is deterministic for the same image. Its confidence is an indicative model-reported score, not a calibrated probability. It is not a real AI analysis. A failed provider response never becomes `No Defect`.
 
+### Outbound Gemini provider request and response
+
+This is the backend-to-Gemini call made when `AI_PROVIDER=gemini`; it is separate from the browser's multipart request to `/ai/predict`. The backend uses the configured `LLM_MODEL` (default `gemini-3.5-flash-lite`) and sends the prompt, manufacturing context, and already-validated image bytes through the Google GenAI SDK. The API key stays in backend configuration and is not part of the prompt or browser request.
+
+The following shows the SDK arguments in a readable Python-style form. The image is passed as an SDK `Part` built from its bytes and verified MIME type; the SDK handles HTTP serialization:
+
+```python
+model = "gemini-3.5-flash-lite"
+contents = [
+    """Inspect the uploaded manufactured product image using the product and batch context.
+Choose exactly one allowed defect category; do not invent categories. Return JSON only with
+defect_type and confidence from 0 to 1. Confidence is an indicative model-reported score,
+not a calibrated probability.
+Manufacturing context: {"batch_number":"BATCH-001","product_name":"Steel Bracket X200",
+"production_line":"Line 3","allowed_defect_types":["Scratch","Dent","Paint Issue",
+"Missing Component","No Defect"]}
+Inspect the visible product surfaces carefully. If no listed defect is visible, choose No Defect.
+Do not infer defects that cannot be seen in the image.""",
+    types.Part.from_bytes(data=image_bytes, mime_type="image/png"),
+]
+config = types.GenerateContentConfig(
+    response_mime_type="application/json",
+    response_schema=types.Schema(
+        type="OBJECT",
+        properties={
+            "defect_type": types.Schema(
+                type="STRING",
+                enum=["Scratch", "Dent", "Paint Issue", "Missing Component", "No Defect"],
+            ),
+            "confidence": types.Schema(type="NUMBER"),
+        },
+        required=["defect_type", "confidence"],
+    ),
+    max_output_tokens=128,
+)
+response = await client.models.generate_content(
+    model=model,
+    contents=contents,
+    config=config,
+)
+raw_response = response.text
+```
+
+The provider's raw response is text, expected to contain JSON like:
+
+```json
+{"defect_type":"Scratch","confidence":0.82}
+```
+
+The backend parses this text with `ProviderPrediction`: extra fields are rejected, `defect_type` must be one of the five `DefectType` values, and `confidence` must be a strict number between 0 and 1. Invalid or missing output fails the request; it is not converted into a successful prediction. Gemini does **not** return `analysis_id`: after validation, the backend generates the inspection UUID, saves the image, creates an `UNREVIEWED` record, and returns the browser-facing `/ai/predict` response shown above.
+
 ## Submit the human decision
 
 `POST /api/v1/inspections` accepts JSON. The browser submits only the unreviewed analysis ID, final defect, and optional comment; AI output, confidence, role, and override status are loaded or calculated by the server.

@@ -37,9 +37,11 @@ class InspectionService:
     async def predict(
         self, *, image: bytes, media_type: str | None, batch_id: str, user: User
     ) -> AIResponse:
+        # Check if batch exits
         batch = self.container.batch_repository.get_batch(batch_id)
         if batch is None:
             raise AppError(404, "batch_not_found", "The selected batch does not exist.")
+        # Validate before calling AI so invalid uploads don't incur provider cost.
         normalized_type, extension = await anyio.to_thread.run_sync(
             validate_image,
             image,
@@ -47,6 +49,7 @@ class InspectionService:
             self.container.settings.max_image_size_bytes,
         )
         try:
+            # The call to analyze method of the AI service
             raw_response = await self.container.ai_provider.analyze(image, normalized_type, batch)
         except TimeoutError as exc:
             logger.warning("AI provider timed out")
@@ -69,6 +72,7 @@ class InspectionService:
                 502, "ai_provider_error", "The AI provider could not analyze this image."
             ) from exc
         try:
+            # Ensure the provider response matches the expected schema.
             prediction_payload = ProviderPrediction.model_validate_json(raw_response)
         except (ValidationError, TypeError) as exc:
             logger.warning("AI provider returned an invalid prediction payload")
@@ -83,6 +87,7 @@ class InspectionService:
             provider=self.container.ai_provider.name,
             model=self.container.ai_provider.model,
         )
+        # Local disk is for development; production should use object storage.
         image_ref = await anyio.to_thread.run_sync(
             self.container.image_storage.save, image, extension
         )
@@ -94,6 +99,7 @@ class InspectionService:
             prediction=prediction,
             created_at=datetime.now(UTC),
         )
+        # Save the analysis in inspections table and return it FE
         self.container.pending_analysis_repository.add(analysis)
         return AIResponse(
             analysis_id=analysis.inspection_id,

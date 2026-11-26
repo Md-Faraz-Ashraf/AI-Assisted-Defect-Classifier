@@ -1,3 +1,5 @@
+"""Implement PostgreSQL repositories that execute SQLAlchemy queries for application services."""
+
 from datetime import datetime
 from uuid import UUID
 

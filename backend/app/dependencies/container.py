@@ -1,3 +1,5 @@
+"""Assemble app-wide providers and repositories, wiring PostgreSQL sessions when configured."""
+
 from dataclasses import dataclass
 from pathlib import Path
 

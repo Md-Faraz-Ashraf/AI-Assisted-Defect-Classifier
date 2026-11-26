@@ -1,3 +1,5 @@
+"""Create the SQLAlchemy engine and session factory used by PostgreSQL repositories."""
+
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 

@@ -16,6 +16,7 @@ router = APIRouter(tags=["AI analysis"])
 async def predict(
     batch_id: Annotated[str, Form(min_length=1, max_length=64)],
     image: Annotated[UploadFile, File(description="JPEG, PNG, or WebP product image")],
+    # Check for the authorization using dependency ingection.
     user: User = Depends(require_quality_engineer),
     container: AppContainer = Depends(get_container),
 ) -> AIResponse:
