@@ -168,6 +168,8 @@ python -m scripts.seed
 
 The backend can send uploaded images to Google's Gemini API. The configured model is `gemini-3.5-flash-lite`; the API key stays on the backend. Configure these values in the repository root `.env`:
 
+Gemini was chosen for its practical free tier for this exercise and because the same Flash Lite model can handle both text and image input, keeping the AI integration simple.
+
 ```dotenv
 AI_PROVIDER=gemini
 AI_API_KEY=your-gemini-api-key
@@ -243,3 +245,9 @@ npm run build
 - [Architecture](docs/ARCHITECTURE.md) — application layers and request flows.
 - [API reference](docs/API.md) — endpoints and request/response examples.
 - [Database guide](docs/DATABASE.md) — schema, migrations, and seeding.
+
+## Shortcuts taken and development approach
+
+Development followed a six-phase plan: project structure, backend API, frontend and API integration, mock-flow verification, PostgreSQL integration, and Gemini vision integration. The phase plan and progress are recorded in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+
+The workflow was human-in-the-loop and AI-assisted. I made the architectural, data-modeling, and API design decisions, selected the libraries, and defined the folder structure. AI assisted with implementing features; I reviewed the changes and provided follow-up direction and corrections.
