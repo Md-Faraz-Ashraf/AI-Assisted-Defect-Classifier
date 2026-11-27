@@ -183,6 +183,10 @@ Restart the backend after changing `.env`. Keep `AI_PROVIDER=mock` to use determ
 
 When Gemini is enabled, uploaded inspection images and associated batch/product context are sent to Google's Gemini API for analysis. Use images you are permitted to share with that service.
 
+### Test with sample images locally
+
+Keep local test images in the repository-root `sample_images/` folder, organized by defect type if useful (for example, `sample_images/Scratch/`). The folder is a convenient place to keep test files; the app does not load images from it automatically. In **New Inspection**, select a batch and use the image picker to upload the sample you want to test. When `AI_PROVIDER=gemini`, that image is sent to Gemini for analysis.
+
 ## Switching modes
 
 Set `APP_MODE=mock` or `APP_MODE=database` in the repository root `.env`, then restart the backend. If `.env` is absent, backend defaults to mock mode. Both modes use the same API models and endpoints. Mock mode keeps application records in process memory; database mode stores them in PostgreSQL. Uploaded image files are stored locally in `backend/var/images` when using the commands above; this path is ignored by Git. Image files are not stored inside PostgreSQL.
