@@ -169,6 +169,8 @@ LLM_MODEL=gemini-3.5-flash-lite
 AI_TIMEOUT_SECONDS=30
 ```
 
+In our use of `gemini-3.5-flash-lite` so far, no cost has been incurred. This records our observed usage; future costs depend on the Google AI account, applicable free-tier limits, and current pricing.
+
 Restart the backend after changing `.env`. Keep `AI_PROVIDER=mock` to use deterministic mock predictions without an API key. Gemini is independent of `APP_MODE`, so it can be used with either in-memory or PostgreSQL persistence. The backend rejects unsupported categories, malformed output, and out-of-range confidence; provider failures do not silently become `No Defect`.
 
 When Gemini is enabled, uploaded inspection images and associated batch/product context are sent to Google's Gemini API for analysis. Use images you are permitted to share with that service.
@@ -210,3 +212,10 @@ npm run lint
 npm test -- --run
 npm run build
 ```
+
+## Project documentation
+
+- [Library guide](docs/LIBRARY_GUIDE.md) — frontend and backend libraries and where they are used.
+- [Architecture](docs/ARCHITECTURE.md) — application layers and request flows.
+- [API reference](docs/API.md) — endpoints and request/response examples.
+- [Database guide](docs/DATABASE.md) — schema, migrations, and seeding.

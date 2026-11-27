@@ -2,13 +2,13 @@
 
 ## Overall progress
 
-- Current phase: Phase 6 — Gemini Vision Provider Integration
+- Current phase: None — Phase 6 complete
 - Phase 1 status: `APPROVED`
 - Phase 2 status: `APPROVED`
 - Phase 3 status: `APPROVED`
 - Phase 4 status: `APPROVED`
 - Phase 5 status: `APPROVED`
-- Phase 6 status: `READY_FOR_REVIEW` (owner selected Gemini `gemini-3.5-flash-lite`)
+- Phase 6 status: `COMPLETED` (owner marked complete on 2026-11-27)
 - Later phases remain `NOT_STARTED` and will not begin until the preceding phase is explicitly approved.
 
 Statuses: `NOT_STARTED`, `IN_PROGRESS`, `READY_FOR_REVIEW`, `APPROVED`, `BLOCKED`, `REJECTED`, `COMPLETED`.
@@ -82,7 +82,7 @@ Phase status: `APPROVED`
 
 ## Phase 6 — Gemini Vision Provider Integration
 
-The owner approved Phase 6 and selected Gemini `gemini-3.5-flash-lite`. The Google Gen AI SDK adapter uses backend-only key configuration, structured classification output, timeout/rate-limit/error handling, provider tests, and setup documentation while retaining mock mode. A live request using a generated image succeeded; user verification of the end-to-end UI flow remains.
+The owner selected Gemini `gemini-3.5-flash-lite` and marked Phase 6 complete on 2026-11-27. The Google Gen AI SDK adapter uses backend-only key configuration, structured classification output, timeout/rate-limit/error handling, provider tests, and setup documentation while retaining mock mode. A live request using a generated image succeeded. Frontend tests cover new and redirected inspection flows using mocked API responses; no separate live Gemini UI run is recorded.
 
 | Task ID | Description | Status | Dependencies | Verification method / actual result | User input required? |
 |---|---|---|---|---|---|
@@ -90,9 +90,9 @@ The owner approved Phase 6 and selected Gemini `gemini-3.5-flash-lite`. The Goog
 | P6-02 | Preserve strict taxonomy validation and map timeout/auth/rate-limit/provider errors safely | COMPLETED | P6-01 | Structured JSON schema, backend Pydantic validation, request timeout, and safe error mapping implemented. | No |
 | P6-03 | Add unit/API tests for request construction, provider behavior, and mock regression | COMPLETED | P6-01, P6-02 | Backend suite: 38 passed; Ruff, format, Mypy, and compileall passed. Gemini unit tests mock network calls. | No |
 | P6-04 | Update README, API, architecture, and setup docs | COMPLETED | P6-01 | Setup and backend/provider documentation updated. | No |
-| P6-05 | Verify live prediction through configured Gemini key and user review | READY_FOR_REVIEW | P6-01–P6-04 | One generated test image returned valid JSON: Scratch, confidence 0.98. Manual UI workflow remains for user review. | Yes |
+| P6-05 | Verify live prediction through configured Gemini key and user review | COMPLETED | P6-01–P6-04 | One generated test image returned valid JSON: Scratch, confidence 0.98. Owner marked Phase 6 complete on 2026-11-27. Automated UI tests use mocked API responses; no separate live Gemini UI run is recorded. | Yes |
 
-Phase status: `READY_FOR_REVIEW`
+Phase status: `COMPLETED`
 
 ## Technical decisions and assumptions
 
@@ -129,6 +129,7 @@ Phase 2 was explicitly approved by the user on 2026-11-24. Phase 3 was approved 
 
 ## User approval history
 
+- 2026-11-27: User requested marking Phase 6 — AI Model Integration complete.
 - 2026-11-25: User directed Phase 6 implementation and selected Gemini `gemini-3.5-flash-lite`; user reports local `.env` and `.env.example` are configured.
 
 - 2026-11-24: User explicitly approved Phase 1 and instructed start of Phase 2 (`"project is pushed to git. please start phase 2"`).
