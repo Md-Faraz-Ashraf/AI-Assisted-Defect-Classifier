@@ -1,6 +1,12 @@
 # AI-Assisted Defect Classifier
 
-Web app and API for analyzing manufacturing inspection images and recording an inspector's review. The frontend calls the same API in both backend modes. The default AI provider is deterministic mock AI; connecting PostgreSQL does not enable a real vision model.
+Helps manufacturing inspectors analyze product images for defects and record their final review decisions.
+
+- **Features:** dashboard quality metrics; inspection history with reviewed/unreviewed filters; image analysis; human review, accept or override AI predictions, and comments.
+- **Roles:** Quality Engineers can analyze images and submit reviews. Production Supervisors can view the dashboard and inspection history.
+- **Inspection flow:** select a batch and upload an image → receive an AI prediction → accept or change the defect type → save the reviewed inspection. Unreviewed analyses can be resumed from history.
+- **Backend modes:** `mock` (in-memory records) or `database` (PostgreSQL); both expose the same API.
+- **AI providers:** deterministic `mock` by default, or Gemini vision with `gemini-3.5-flash-lite` when configured. Persistence mode and AI provider are configured independently.
 
 ## Prerequisites
 
