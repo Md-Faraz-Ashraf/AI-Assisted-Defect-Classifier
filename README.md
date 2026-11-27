@@ -202,6 +202,24 @@ Set `APP_MODE=mock` or `APP_MODE=database` in the repository root `.env`, then r
 
 ## Checks
 
+Run the complete pre-commit quality gate from the repository root:
+
+```powershell
+python -m pre_commit run --all-files
+```
+
+This runs frontend and backend unit tests, dependency audits, formatting, lint, and type checks. Git runs the same gate automatically before each commit after the hook is installed.
+
+To run **unit tests only**, use these commands from the repository root:
+
+```powershell
+cd frontend
+npm test -- --run
+cd ..\backend
+.\.venv\Scripts\python.exe -m pytest
+cd ..
+```
+
 Backend checks (from `backend`, with its virtual environment active):
 
 ```powershell
